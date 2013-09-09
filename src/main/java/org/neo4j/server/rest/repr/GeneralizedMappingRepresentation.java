@@ -54,7 +54,7 @@ public class GeneralizedMappingRepresentation extends MappingRepresentation {
 //                    Object valueConverted = ;
                     
 //                    JSONObject parsedValue = null;
-                    if (value instanceof String) {
+/*                    if (value instanceof String) {
                         serializer.putString(key, (String) value);
 
 /*                    	try {
@@ -85,8 +85,8 @@ public class GeneralizedMappingRepresentation extends MappingRepresentation {
                     	}                    		
                 		if (!isJSON) {
 	                        serializer.putString(key, (String) value);
-                		} */
-                    } else {
+                		}
+                    } else { */
                     
 	                    if (value instanceof Map) {
 	                        serializer.putMapping(key, (MappingRepresentation) OpentreeRepresentationConverter.convert(value));
@@ -99,16 +99,19 @@ public class GeneralizedMappingRepresentation extends MappingRepresentation {
 	
 	                    } else if (value instanceof Float || value instanceof Double || value instanceof Long || value instanceof Integer) {
 	                        serializer.putNumber(key, (Number) value);
+
+	                    } else if (value instanceof String) {
+	                    	serializer.putString(key, (String) value);
 	
 	                    } else if (value.getClass().isArray()) {
                         	serializer.putString(key, Arrays.toString((Object[]) value));
-                        		
+
 	                    } else {
-	                    	serializer.putString(key, "ERROR: no method for displaying this object");
+	                    	serializer.putString(key, value.toString());
 	                    }
                     }
                 }
-            }
+//            }
         };
     }
 }
