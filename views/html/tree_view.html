@@ -1,27 +1,11 @@
-<!DOCTYPE html>
-<meta charset="utf-8">
-<head>
-<title>OTU: look at that tree</title>
-    <link rel="stylesheet" href="css/jquery-ui-1.10.3.custom.min.css" />
-    <script src="js/jquery-1.9.1.js"></script>
-    <script src="js/jquery-ui-1.10.3.custom.min.js"></script>
-    <script src="js/d3.v3.min.js" charset="utf-8"></script>
-    <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
-    <link href="css/bootstrap-responsive.css" rel="stylesheet">
-    <script src="js/bootstrap.min.js"></script>
-    <script src="js/otutils.js"></script>
-    <!--script>
-// this seems to be unnecessary?
- $(function() {
-     $("#radio").buttonset();
- });
-    </script-->
-    <!--style>
-    #format { margin-top: 2em; }
-    </style-->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
- 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <title>OTU: look at that tree</title>
+
+        $$HEAD_CONTENT$$
+
+        <style>
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
@@ -40,56 +24,38 @@ body {
 	width: 20em;
 
 }
-    </style>
+        </style>
     </head>
     <body>
-    <div class="navbar navbar-inverse navbar-fixed-top">
-        <div class="navbar-inner">
-            <div class="container">
-                <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                </button>
-                <a class="brand" href="#">OTU</a>
-                <div class="nav-collapse collapse">
-                    <ul class="nav">
-                        <li><a href="cgi-bin/load_sources.py">Load and List Sources</a></li>
-                        <li><a href="search_sources.html">Search Sources</a></li>
-                        <li><a href="source_view.html">View Source</a></li>
-                        <li class="active"><a href="#">View Tree</a></li>
-                        <li><a href="conf.html">Configure</a></li>
-                    </ul>
-                </div><!--/.nav-collapse -->
+
+        $$NAVBAR$$
+
+        <div class="container">
+            <div id="loadFormContainer">
+                <div>
+                    Load a different tree from this source
+                    <form class="form-inline" action="tree_view.py" method="GET">
+                        <select id="loadSelectThisSource" name="treeId" style="width:16em;"></select>
+                        <button type="submit" class="btn" id="thisSourceButton">Load</submit>
+                    </form>
+                </div>
+                <div>
+                    Load a different tree from any source
+                    <form class="form-inline" action="tree_view.py" method="GET">
+                        <select id="loadSelectAll" style="width:16em;" name="treeId"></select>
+                        <button type="submit" class="btn" id="allSourceButton">Load</button>
+                    </form>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="container">
-        <div id="loadFormContainer">
-            <div>
-                Load a different tree from this source
-	            <form class="form-inline" action="tree_dyn.html" method="GET">
-	                <select id="loadSelectThisSource" name="treeId" style="width:16em;"></select>
-	                <button type="submit" class="btn" id="thisSourceButton">Load</submit>
-	            </form>
+            <h4 id="treeId"></h4>
+            <div class="btn-group" data-toggle="buttons-radio">
+                <button type="button" class="btn btn-large btn-success" name="cac" value=1 id="refocusButton">Refocus</button>
+                <button type="button" class="btn btn-large btn-primary" name="cac" value=2>Reroot</button>
+                <button type="button" class="btn btn-large btn-primary" name="cac" value=3>Choose Ingroup</button>
             </div>
-            <div>
-                Load a different tree from any source
-                <form class="form-inline" action="tree_dyn.html" method="GET">
-                    <select id="loadSelectAll" style="width:16em;" name="treeId"></select>
-                    <button type="submit" class="btn" id="allSourceButton">Load</button>
-                </form>
-            </div>
+            <button type="button" class="btn btn-large btn-danger" id="deleteTreeBtn" onClick="deleteTree()" id>Delete Tree</button>
         </div>
-        <h4 id="treeId"></h4>
-        <div class="btn-group" data-toggle="buttons-radio">
-            <button type="button" class="btn btn-large btn-success" name="cac" value=1 id="refocus">Refocus</button>
-	        <button type="button" class="btn btn-large btn-primary" name="cac" value=2>Reroot</button>
-	        <button type="button" class="btn btn-large btn-primary" name="cac" value=3>Choose Ingroup</button>
-        </div>
-        <button type="button" class="btn btn-large btn-danger" id="deleteTreeBtn" onClick="deleteTree()" id>Delete Tree</button>
-    </div>
-    <script>
+        <script>
 
 // geometry
 
@@ -144,7 +110,8 @@ function setupPage(sourceId, treeId) {
 }
 
 function resetRadio() {
-    $('button[id="refocus"]').button('toggle');
+    $('button[id="refocusButton"]').button('toggle');
+//    $("refocusButton").button("toggle");
 }
 
 // gets a list of all trees *within the current study*
@@ -482,8 +449,7 @@ $(document).ready(function() {
     } else {
         sourceId = getSourceIdForTreeId(treeId);
     }
-    
-    setupPage(sourceId, treeId);
+
     var rootNodeId;
     if (treeId != "undefined") {
         rootNodeId = getRootIdFromTreeId(treeId);
@@ -494,10 +460,12 @@ $(document).ready(function() {
 
         d3.select(self.frameElement).style("height", "800px");
     }
-    
+
     // fill the tree selector dropdowns even if there is no tree loaded 
     getSourceTreeList(sourceId, treeId);
     getAllLocalTreeList(treeId);
+    
+    setupPage(sourceId, treeId);
     
 });
 
@@ -509,6 +477,6 @@ function setCoords() {
     yo = bbox.top + margin.top;
 }
 
-</script>
-</body>
+        </script>
+    </body>
 </html>

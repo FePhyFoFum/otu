@@ -84,7 +84,7 @@ public class sourceJsons extends ServerPlugin {
 			@Description("A string to be used as the source id for for this source. Source ids must be unique.") @Parameter(name = "sourceId", optional = false) String sourceId,
 			@Description("A newick string containing the tree to be added.") @Parameter(name = "newickString", optional = false) String newickString) {
 
-		Map<String, String> result = new HashMap<String, String>();
+		Map<String, Object> result = new HashMap<String, Object>();
 		
 		GraphDatabaseAgent gdb = new GraphDatabaseAgent(graphDb);
 		DatabaseManager dm = new DatabaseManager(gdb);
@@ -100,11 +100,12 @@ public class sourceJsons extends ServerPlugin {
 		try {
 			dm.addSource(source, DatabaseManager.LOCAL_LOCATION);
 		} catch (DuplicateSourceException e) {
-			result.put("worked","false");
-			result.put("message","a local source with id " + sourceId + " already exists in the database");
+			result.put("event", "warning");
+			result.put("message", "A local source with id " + sourceId + " already exists in the database.");
 		}
 	
-		result.put("worked","true");
+		result.put("event", "added");
+		result.put("sourceId", sourceId);
 		return OpentreeRepresentationConverter.convert(result);
 	}
 
@@ -145,7 +146,7 @@ public class sourceJsons extends ServerPlugin {
 		try {
 			source = NexsonReader.readNexson(sr, sourceId, false, msgLogger);
 		} catch (IOException e) {
-			result.put("worked",false);
+			result.put("event", "warning");
 			result.put("message", e.toString());
 		}
 
@@ -153,12 +154,13 @@ public class sourceJsons extends ServerPlugin {
 		try {
 			manager.addSource(source, DatabaseManager.LOCAL_LOCATION);
 		} catch (DuplicateSourceException ex) {
-			result.put("worked",false);
-			result.put("message","a local source with id " + sourceId + " already exists in the database");
+			result.put("event", "warning");
+			result.put("message", "A local source with id " + sourceId + " already exists in the database.");
 		}
 
 		if (result.size() < 1) {
-			result.put("worked",true);
+			result.put("event", "added");
+			result.put("sourceId", sourceId);
 		}
 
 		return OpentreeRepresentationConverter.convert(result);
@@ -207,7 +209,7 @@ public class sourceJsons extends ServerPlugin {
 		manager.setProperties(node, keys, values, types);
 		
 		Map<String, Object> result = new HashMap<String, Object>();
-		result.put("worked", true);
+		result.put("event", "success");
 		return OpentreeRepresentationConverter.convert(result);
 	}
 
@@ -245,8 +247,8 @@ public class sourceJsons extends ServerPlugin {
 		dm.deleteSource(sourceMeta);
 
 		Map<String, Object> result = new HashMap<String, Object>();
-		result.put("worked", true);
+		result.put("event", "added");
+		result.put("sourceId", sourceId);
 		return OpentreeRepresentationConverter.convert(result);
 	}
-
 }

@@ -14,7 +14,6 @@ public class GeneralizedMappingRepresentation extends MappingRepresentation {
 
     public GeneralizedMappingRepresentation(RepresentationType type) {
         super(type);
-        // TODO Auto-generated constructor stub
     }
 
     public GeneralizedMappingRepresentation(String type) {
@@ -37,6 +36,7 @@ public class GeneralizedMappingRepresentation extends MappingRepresentation {
 
     @Override
     protected void serialize(MappingSerializer serializer) {
+
     }
 
     public static MappingRepresentation getMapRepresentation(final Map<String, Object> data) {
@@ -47,46 +47,10 @@ public class GeneralizedMappingRepresentation extends MappingRepresentation {
 
                 for (Map.Entry<String, Object> pair : data.entrySet()) {
                     
-                    // TODO: extend serializer so it can use things other than strings for map keys
+                    // TODO: extend the neo4j MappingSerializer (make a class called GeneralizedMappingSerializer) so it can use things other than strings for map keys
 
                     String key = pair.getKey();
                     Object value = pair.getValue();
-//                    Object valueConverted = ;
-                    
-//                    JSONObject parsedValue = null;
-/*                    if (value instanceof String) {
-                        serializer.putString(key, (String) value);
-
-/*                    	try {
-                    		JSONParser parser = new JSONParser();
-                    		Map json = (Map) parser.parse((String) value);
-                    		serializer.putMapping(key, (MappingRepresentation) OpentreeRepresentationConverter.convert((JSONObject) json));
- 
-                    	} catch (ParseException ex) {
-                    		
-                    		// horrible...
-	                        serializer.putString(key, (String) value);
-                    	}
-/*                    	boolean isJSON = false;
-                    	for (int i = 0; i < ((String) value).length(); i++) { // this isn't working but this is how we should do it....
-                    		if (Character.isWhitespace(((String)value).charAt(i))) {
-                    			continue;
-                    		} else if (((String) value).charAt(i) == '{') {
-    	                        serializer.putMapping(key, (MappingRepresentation) OpentreeRepresentationConverter.convert((JSONObject) value));
-                            	isJSON = true;
-                    			break;
-                        	} else if (((String) value).charAt(i) == '[') {
-    	                        serializer.putList(key, (ListRepresentation) OpentreeRepresentationConverter.convert((JSONObject) value));
-                            	isJSON = true;
-                    			break;
-                    		} else {
-                    			break;
-                    		}
-                    	}                    		
-                		if (!isJSON) {
-	                        serializer.putString(key, (String) value);
-                		}
-                    } else { */
                     
 	                    if (value instanceof Map) {
 	                        serializer.putMapping(key, (MappingRepresentation) OpentreeRepresentationConverter.convert(value));

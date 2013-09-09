@@ -1,72 +1,60 @@
-<html lang="en">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
     <head>
         <title>OTU: look at that source</title>
-        <script src="js/jquery-1.9.1.js"></script>
-        <script src="js/jquery-ui-1.10.3.custom.min.js"></script>
-        <script src="js/d3.v3.min.js" charset="utf-8"></script>
-        <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
-        <link href="css/bootstrap-responsive.css" rel="stylesheet">
-        <script src="js/bootstrap.min.js"></script>
-        <script src="js/otutils.js"></script>
+
+        $$HEAD_CONTENT$$
+
         <style>
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+
 } .treeHeader * {
     margin-right: 0.22em;
+
 } #editSourceBtn, .editTreeBtn {
     width: 10em;
+
 } #loadFormContainer {
     position: absolute;
     top: 6.7em;
     right:3em;
     width: 22em;
     padding-right:0em;
+
 } .submitTreeEditsBtn, #submitSourceEditsBtn {
     position: absolute;
     top: 0;
     right: 0;
+
 } #format {
     margin-top: 2em;
+
 } .editForm {
     position: relative;    
+
 } .formTable tr td .form-control {
     font-size: 1em;
     width: 100%;
     margin: 0;
+
 } form tr td input {
     padding: 0.8em 0.4em 0.8em 0.4em;
     height: 1.7em !important;
+
 } form tr td textarea {
     height: 6em;
+
 } form .hidden {
     display: none !important;
     position: absolute !important;
 }
         </style>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
-        <div class="navbar navbar-inverse navbar-fixed-top">
-            <div class="navbar-inner">
-                <div class="container">
-                    <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="brand" href="#">OTU</a>
-                    <div class="nav-collapse collapse">
-                        <ul class="nav">
-                            <li><a href="cgi-bin/load_sources.py">Load and List Sources</a></li>
-			                <li><a href="search_sources.html">Search Sources</a></li>
-                            <li class="active"><a href="#">View Source</a></li>
-                            <li><a href="tree_dyn.html">View Tree</a></li>
-                            <li><a href="conf.html">Configure</a></li>
-                        </ul>
-                    </div><!--/.nav-collapse -->
-                </div>
-            </div>
-        </div>
+        
+        $$NAVBAR$$
+        
         <div class="container">
             <div id="loadFormContainer">
                 Load a different source...
@@ -75,7 +63,7 @@ body {
 	                <button id="loadselectBtn" type="button" class="btn" onClick='loadDifferentSource()'>Load</button>
 	            </form>
             </div>
-            <h3 id="sourceTitle" class="text-info"></h3>
+            <h4 id="sourceTitle"></h4>
 	        <div class="btn-group">
 	            <button type="button" class="btn btn-large btn-success" name="cac" value=0 id="editSourceBtn">Edit Metadata</button>
 	            <button type="button" class="btn btn-large btn-success" name="cac" value=1 id="exportBtn">Export</button>
@@ -255,7 +243,7 @@ function getFormTableRow(property, value, displayValue) {
 // called by the source selector dropdown
 function loadDifferentSource() {
     var sourceId = $("#loadselect").val();
-    window.location.href="source_view.html?sourceId=" + sourceId + ""
+    window.location.href="source_view.py?sourceId=" + sourceId + ""
 }
 
 function toggleSourceEditForm() {
@@ -362,8 +350,17 @@ function pushSource() {
 function deleteSourceLocal() {
     var deleteLocalSourceService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/deleteSourceFromSourceId";
     xhr = getXhr(deleteLocalSourceService, function() {
-        var response = JSON.parse(xhr.responseText);
-        window.location.href = "cgi-bin/load_sources.py";
+//        var response = JSON.parse(xhr.responseText);
+        var confirmForm = $(document.createElement("form"))
+            .attr("action", "load_sources.py")
+            .attr("method", "POST")
+            .append($(document.createElement("input"))
+                .attr("type", "hidden")
+                .attr("name", "deleted_source_id")
+                .val(activeSourceId));
+            
+        $(confirmForm).submit();
+            
     });
     xhr.send(JSON.stringify({"sourceId": activeSourceId}));
 }

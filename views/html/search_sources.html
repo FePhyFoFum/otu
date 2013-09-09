@@ -1,65 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
-  <head>
-    <title>OTU: get data in there</title>
-    <link href="../css/bootstrap.min.css" rel="stylesheet" media="screen">
-    <link href="../css/bootstrap-responsive.css" rel="stylesheet">
-    <script src="../js/jquery-1.9.1.js"></script>
-    <script src="../js/bootstrap.min.js"></script>
-    <script src="../js/jquery-ui-1.10.3.custom.min.js"></script>
-        <script src="js/otutils.js"></script>
+    <head>
+        <title>OTU: get data in there</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      body {
-        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
-      } #resultsTable td {
-		  padding: 0 .3em 0 .3em;
-	  }
-    </style>
-  </head>
-  <body>
-    <div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="navbar-inner">
+        $$HEAD_CONTENT$$    
+        <style>
+            
+body {
+    padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+
+} #resultsTable td {
+    padding: 0 .3em 0 .3em;
+
+}
+        </style>
+    </head>
+    <body>
+    
+        $$NAVBAR$$
+    
         <div class="container">
-          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="brand" href="#">OTU</a>
-          <div class="nav-collapse collapse">
-            <ul class="nav">
-              <li><a href="cgi-bin/load_sources.py">Load and List Sources</a></li>
-              <li class="active"><a href="#">Search Sources</a></li>
-              <li><a href="source_view.html">View Source</a></li>
-              <li><a href="tree_dyn.html">View Tree</a></li>
-              <li><a href="conf.html">Configure</a></li>
-            </ul>
-          </div><!--/.nav-collapse -->
+            <div style="position:absolute; top:8.7em; right:0; width: 25em; padding-right:3em;">
+                <form class="form-inline">
+                    <button type="button" class="btn btn-large btn-primary" onclick="initRemoteIndexing(); return false;">Index remote sources for searching</button>
+                </form>
+            <div id="statusCount"></div>
+            <div id="statusMessage"></div>
         </div>
-      </div>
-    </div>
-    <div class="container">
-    <div style="position:absolute; top:8.7em; right:0; width: 25em; padding-right:3em;">
-      <form class="form-inline">
-        <button type="button" class="btn btn-large btn-primary" onclick="initRemoteIndexing(); return false;">Index remote sources for searching</button>
-      </form>
-      <div id="statusCount"></div>
-      <div id="statusMessage"></div>
-    </div>
-      <h2>Search all sources</h2>
-          <form id="searchform" class="form-inline">
-            <div class="btn-group" data-toggle="buttons-radio">
-              <input id="searchtext" type="text" style="height:3.2em; width:20em; margin:0 .35em 0 0;"></input>
-              <select id="propertyselect" class="select-large" style="height: 3.2em; width:15em"></select>
+        <h2>Search all sources</h2>
+            <form id="searchform" class="form-inline">
+                <div class="btn-group" data-toggle="buttons-radio">
+                    <input id="searchtext" type="text" style="height:3.2em; width:20em; margin:0 .35em 0 0;"></input>
+                    <select id="propertyselect" class="select-large" style="height: 3.2em; width:15em"></select>
+                </div>
+                <button type="button" class="btn btn-large btn-success" onclick="search(); return false;">Search</button>
+            </form>
+            <div id="results">
+                <table id="resultsTable"></table>
             </div>
-              <button type="button" class="btn btn-large btn-success" onclick="search(); return false;">Search</button>
-          </form>
-          <div id="results">
-            <table id="resultsTable"></table>
-          </div>
-    </div>
-  <script language ="javascript" type = "text/javascript" >
+        </div>
+        <script language ="javascript" type = "text/javascript" >
 
 function search() {
 	getRecentHash();
@@ -274,10 +254,12 @@ function fillPropertyList(){
 }
 
 
-// ===== call page load functions
+// ===== onload
 
-fillPropertyList();
+$(document().ready(function() {
+    fillPropertyList();
+});
 
-  </script> 
-</body>
+        </script> 
+    </body>
 </html>

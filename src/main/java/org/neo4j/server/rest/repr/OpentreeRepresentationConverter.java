@@ -1,12 +1,10 @@
 package org.neo4j.server.rest.repr;
 
+import jade.IterableArray;
+
 import java.util.Iterator;
 import java.util.Map;
 
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.neo4j.helpers.collection.FirstItemIterable;
 import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.helpers.collection.IteratorWrapper;
@@ -35,14 +33,6 @@ public class OpentreeRepresentationConverter {
     	// start with specific object classes that might be observed, and move to more general
     	// types of containers if the data doesn't match a specific type
     	
-/*        if (data instanceof TNRSResults) {
-            return getTNRSResultsRepresentation((TNRSResults) data);
-
-        } else if (data instanceof ContextResult) {
-        	return getContextResultRepresentation((ContextResult) data);
-
-        } else */
-    	
     	if (data instanceof Iterable) {
         	return getListRepresentation( (Iterable) data);
         
@@ -52,9 +42,6 @@ public class OpentreeRepresentationConverter {
         
         } else if (data instanceof Map) {
             return getMapRepresentation( (Map) data );
-
-    	// deprecated code, probably won't ever be used here...
-        // } else if ( data instanceof Table ) { return new GremlinTableRepresentation( (Table) data );
             
         } else {
         	return getSingleRepresentation(data);
@@ -68,34 +55,6 @@ public class OpentreeRepresentationConverter {
     //  public conversion methods for specific data types below here
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////
-
-    
-    /*
-     * Return a serialization of a TNRSResults object
-     * @param results
-     * @return
-     *
-    public static Representation getTNRSResultsRepresentation(TNRSResults results) {
-    	return TNRSResultsRepresentation.getResultsRepresentation(results);
-    }
-    
-    /**
-     * Return a serialization of a single TNRSNameResult object
-     * @param nameResult
-     * @return
-     *
-    public static Representation getContextResultRepresentation(ContextResult result) {
-    	return TNRSResultsRepresentation.getContextRepresentation(result);
-    }
-    
-    /**
-     * Return a serialization of a single TNRSNameResult object
-     * @param nameResult
-     * @return
-     *
-    public static MappingRepresentation getTNRSNameResultRepresentation(TNRSNameResult nameResult) {
-      return TNRSResultsRepresentation.getNameResultRepresentation(nameResult);
-    }
 
     /**
      * Return a serialization of a general map type
@@ -144,36 +103,18 @@ public class OpentreeRepresentationConverter {
 
     static FirstItemIterable<Representation> convertValuesToRepresentations(Iterable data)
     {
-        /*
-         * if ( data instanceof Table ) { return new FirstItemIterable<Representation>(Collections.<Representation>singleton(new GremlinTableRepresentation(
-         * (Table) data ))); }
-         */
+
         return new FirstItemIterable<Representation> (
                 new IterableWrapper<Representation, Object>(data) {
 
                     @Override
                     protected Representation underlyingObjectToObject(Object value) {
 
-/*                        if (value instanceof TNRSNameResult) {
-                            return getTNRSNameResultRepresentation((TNRSNameResult)value);
- 
-                        } else */ if (value instanceof Iterable) {
+                    	if (value instanceof Iterable) {
                             final FirstItemIterable<Representation> nested = convertValuesToRepresentations((Iterable) value);
                             return new ListRepresentation(getType(nested), nested);
-/*
-                        // TODO: check if this is a json object.... maybe should create a new class for serializing json objects...
-                        } else if (false) {
-                        	JSONParser parser = new JSONParser();
-                        	Map json = null;
-							try {
-								json = (Map) parser.parse((String) value);
-							} catch (ParseException e) {
-								
-								// TODO: do something with this...
-								e.printStackTrace();
-							}                        
-                        	return OpentreeRepresentationConverter.getMapRepresentation(((JSONObject) json)); */
-                        } else {
+
+                    	} else {
                             return getSingleRepresentation(value);
                         }
                     }
@@ -206,12 +147,6 @@ public class OpentreeRepresentationConverter {
     {
         if (data == null) {
             return ValueRepresentation.string("null");        
-
-/*        } else if (data instanceof TNRSNameResult) {
-            return getTNRSNameResultRepresentation((TNRSNameResult) data);
-    
-        } else if (data instanceof TNRSMatchSet) {
-            return getListRepresentation((TNRSMatchSet) data); */
         
         } else if (data instanceof Double || data instanceof Float) {
             return ValueRepresentation.number(((Number) data).doubleValue());
@@ -222,25 +157,8 @@ public class OpentreeRepresentationConverter {
         } else if (data instanceof Integer) {
             return ValueRepresentation.number(((Integer) data).intValue());
         
-//        } else {
-//            return ValueRepresentation.string(data.toString());
-//        
-//        }
-        } else if (data instanceof String) {
-        	return ValueRepresentation.string((String) data);
-
-/*        	for (int i = 0; i < ((String) data).length(); i++) {
-        		if (Character.isWhitespace(((String)data).charAt(i)) || ((String) data).charAt(i) == '"') {
-        			continue;
-        		} else if (((String) data).charAt(i) == '{') {
-                    return OpentreeRepresentationConverter.getMapRepresentation((JSONObject) data);
-            	} else if (((String) data).charAt(i) == '[') {
-                    return OpentreeRepresentationConverter.getListRepresentation((JSONArray) data);
-        		} else {
-        			break;
-        		}
-        	}
-        	return ValueRepresentation.string((String) data); */
+        } else if (data.getClass().isArray()) {
+        	return getIteratorRepresentation(new IterableArray((Object[]) data).iterator());
 
         } else {
         	return ValueRepresentation.string(data.toString());

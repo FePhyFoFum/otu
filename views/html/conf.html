@@ -1,63 +1,40 @@
-<html lang="en">
-<head>
-<title>OTU: look at that source</title>
- <script src="js/jquery-1.9.1.js"></script>
- <script src="js/jquery-ui-1.10.3.custom.min.js"></script>
- <script src="js/d3.v3.min.js" charset="utf-8"></script>
- <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
- <link href="css/bootstrap-responsive.css" rel="stylesheet">
- <script src="js/bootstrap.min.js"></script>
- <script>
-  $(function() {
-    $( "#radio" ).buttonset();
-  });
- </script>
- <style>
-  #format { margin-top: 2em; }
-  </style>
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <style>
-      body {
-        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
-      }
-    </style>
-</head>
-<div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container">
-          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="brand" href="#">OTU</a>
-          <div class="nav-collapse collapse">
-            <ul class="nav">
-              <li><a href="cgi-bin/load_sources.py">Load and List Sources</a></li>
-              <li><a href="search_sources.html">Search Sources</a></li>
-              <li><a href="source_view.html">View Source</a></li>
-              <li><a href="tree_dyn.html">View Tree</a></li>
-              <li class="active" ><a href="#">Configure</a></li>
-            </ul>
-          </div><!--/.nav-collapse -->
-        </div>
-      </div>
-    </div>
-<div class="container">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <title>OTU: look at that source</title>
+
+        $$HEAD_CONTENT$$
+
+        <style>
+#format {
+    margin-top: 2em;
+
+} body {
+    padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+}
+        </style>
+    </head>
     <body>
-    <form>
-  <fieldset>
-    <legend>Configuration Information</legend>
-    <label>Nexson Git Directory</label>
-    <div id="divgitdir">
-    <input type="text" id="gitdir" name="gitdir" class="input-xxlarge" value="">
-    <span class="help-block">This is the directory to the avatol_nexson git directory. <br/> You can leave this empty</span>
-    <button type="submit" class="btn" onClick="setConf()">Submit</button>
-    </div>
-  </fieldset>
-</form>
-</div>
-<script>
+        
+        $$NAVBAR$$
+        
+        <div class="container">
+            <form>
+                <fieldset>
+                    <legend>Configuration Information</legend>
+                    <label>Nexson Git Directory</label>
+                    <div id="divgitdir">
+                        <input type="text" id="gitdir" name="gitdir" class="input-xxlarge" value="" />
+                            <span class="help-block">
+                                This is the directory to the avatol_nexson git directory.
+                                <br/> You can leave this empty
+                            </span>
+                        <button type="submit" class="btn" onClick="setConf()">Submit</button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <script>
 
 function editConf(){
     var st = $("#hiddengitdir").val();
@@ -104,7 +81,13 @@ function getConf(){
     }
 }
 
-getConf();
-</script>
-</body>
+// ===== onload
+
+$(document).ready(function() {
+    $("#radio").buttonset();
+    getConf();
+});
+
+        </script>
+    </body>
 </html>

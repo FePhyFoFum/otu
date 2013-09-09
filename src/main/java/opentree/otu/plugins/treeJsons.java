@@ -1,6 +1,8 @@
 package opentree.otu.plugins;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -31,6 +33,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.server.plugins.*;
+import org.neo4j.server.rest.repr.JSONToRepresentationConverter;
 import org.neo4j.server.rest.repr.OpentreeRepresentationConverter;
 import org.neo4j.server.rest.repr.Representation;
 
@@ -240,40 +243,25 @@ public class treeJsons extends ServerPlugin{
         String respJSON = tnrs.accept(MediaType.APPLICATION_JSON_TYPE)
         		.type(MediaType.APPLICATION_JSON_TYPE).post(String.class, new JSONObject(query).toJSONString());
 
-        // System.out.println(respJSON);
-
-        // parse the JSON response
-//        GNRResponse response = null;
+		// save the result to a local file
+        String savedResultsFilePath = "tnrs." + root.getId() + ".json";
         
-        // ===== 
-		
-/*		os.write(new JSONObject(query).toJSONString().getBytes());
-		os.write(new JSONObject(query).toJSONString());
-		os.flush();
- 
-		if (conn.getResponseCode() != HttpURLConnection.HTTP_CREATED) {
-			throw new RuntimeException("Failed : HTTP error code : "
-				+ conn.getResponseCode() + "\n" + conn.getResponseMessage());
-		}
- 
-		BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-		conn.disconnect(); */
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter( new FileWriter( savedResultsFilePath));
+            writer.write(respJSON);
 
-        ContainerFactory containerFactory = new ContainerFactory() {
-        	public List creatArrayContainer() {
-        		return new LinkedList();
+        } finally {
+        	if ( writer != null) {
+        		writer.close( );
         	}
-
-            public Map createObjectContainer() {
-            	return new LinkedHashMap();
-            }
-                                
-        };
+        }
         
-		JSONParser parser = new JSONParser();
-		Map json = (Map) parser.parse(respJSON);
-
-		// return the result. Would be awesome if we could return it as JSON....*/
-		return OpentreeRepresentationConverter.convert(json);
+        // return some JSON with the file location so python can grab the file
+        Map<String, Object> results = new HashMap<String, Object>();
+        results.put("worked", true);
+        results.put("results_file", savedResultsFilePath);
+		
+        return(OpentreeRepresentationConverter.convert(results));
 	}
 }

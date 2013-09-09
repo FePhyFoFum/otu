@@ -7,6 +7,7 @@ this script will substitute results information into the specified HTML_TEMPLATE
 print the result to the web browser.
 """
 
+import otu
 import json
 import urllib2
 import cgi,cgitb
@@ -21,38 +22,60 @@ try: # Windows needs stdio set for binary mode.
 except ImportError:
     pass
 
+##################### page definition. to make new pages, see the otu.PAGES dict
+
+current = "LOAD"
+HTML = otu.get_html(current)
+
+#####################
+
+
 # where we put files that we're going to work with
 UPLOAD_DIR = "/tmp"
 
-# this is the template that will be filled in and printed to the browser
-HTML_TEMPLATE = open("cgi-bin/load_sources_TEMPLATE.html","rU").read()
-
-UNSPECIFIED_ACTION = "unspecified action"
-NO_ACTION = "no action"
+# recognized events
+ADDED = "added"
+WARNING = "warning"
+SUCCESS = "success"
+NO_ACTION = "no_action"
 
 resturlsinglenewick = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/putSourceNewickSingle"
 resturlnexsonfile = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/putSourceNexsonFile"
 
 # ===== functions for saving uploaded files
 
-def save_uploaded_file(form, form_field, upload_dir):
-    if (len(form.keys()) < 1):
-        return {"worked":False,"message":NO_ACTION}
+def process_incoming_form (form, form_field, upload_dir):
+
     log = open("logging","w")
-    log.write("HERE\n")
+    log.write("Incoming form contents:\n")
     for i in form.keys():
         log.write(i + ": " + form[i].value + "\n")
     log.close()
-    r = ""
-    if form.has_key("hidden_newick_from_file"):
-        r = save_uploaded_file_newick(form, form_field,upload_dir)
+
+    result = {}
+
+    # don't do anything if the form is empty
+    if (len(form.keys()) < 1):
+        result["event"] = NO_ACTION
+
+    elif form.has_key("hidden_newick_from_file"):
+        result = save_uploaded_file_newick(form, form_field,upload_dir)
+
     elif form.has_key("hidden_nexson_from_git"):
-        r = save_git_file_nexson(form, upload_dir)
+        result = save_git_file_nexson(form, upload_dir)
+
     elif form.has_key("hidden_nexson_from_file"):
-        r = save_uploaded_file_nexson(form, form_field,upload_dir)
+        result = save_uploaded_file_nexson(form, form_field,upload_dir)
+
+    elif form.has_key("deleted_source_id"):
+        result["event"] = SUCCESS
+        result["message"] = "Source " + form["deleted_source_id"].value + " was removed from the database."
+
     else:
-        r = {"worked": False, "message":UNSPECIFIED_ACTION}
-    return r
+        result["event"] = WARNING
+        result["message"] = "Unrecognized action. Nothing to be done..."
+
+    return result
         
 def save_uploaded_file_newick (form, form_field, upload_dir):
     log = open("logging","a")
@@ -88,7 +111,7 @@ def save_uploaded_file_newick (form, form_field, upload_dir):
         },data = data)
     f = urllib2.urlopen(req)
     log.close()
-    return {"worked":True, "sourceId":sourceid}
+    return {"event": ADDED, "sourceId": sourceid}
 
 def save_git_file_nexson(form, upload_dir):
     log = open("logging","a")
@@ -112,17 +135,17 @@ def save_git_file_nexson(form, upload_dir):
     f = urllib2.urlopen(req2)
     log.close()
     result = json.loads(f.read())
-    result["sourceId"] = sourceId
+#    result["sourceId"] = sourceId
     return result
 
 def save_uploaded_file_nexson (form, form_field, upload_dir):
-    return {"worked":False,"message":"Manual nexson upload not implemented"}
+    return {"event": WARNING, "message": "Manual nexson upload not (yet) implemented."}
 
-def make_json_with_newick(sourcename,newick):
+def make_json_with_newick(sourcename, newick):
     data = json.dumps({"sourceId": sourcename, "newickString": newick})
     return data
 
-def make_json_with_nexson(sourcename,nexson):
+def make_json_with_nexson(sourcename, nexson):
     data = json.dumps({"sourceId": sourcename, "nexsonString": nexson})
     return data
     
@@ -160,24 +183,28 @@ def print_html_form (result, recenthash, gitfilelist):
     """
 
     print "content-type: text/html\n"
-    html = HTML_TEMPLATE.replace("$GITFILELIST$",gitfilelist).replace("$RECENTHASH$",recenthash).replace("$MESSAGE$",message)
+    html = HTML.replace("$GITFILELIST$",gitfilelist).replace("$RECENTHASH$",recenthash).replace("$MESSAGE$",message)
     
     print html
 
+# ===== now actually do stuff
 
-# now actually do stuff
-
-result = save_uploaded_file (cgi.FieldStorage(), "file", UPLOAD_DIR)
+# take actions specified in the incoming form
+result = process_incoming_form (cgi.FieldStorage(), "file", UPLOAD_DIR)
 message = ""
-#if result != UNSPECIFIED_ACTION:
-if result["worked"]:
-    message = '<p class="highlight">Added source '+result["sourceId"]+' to the database. <a href="../source_view.html?sourceId='+result["sourceId"]+'">Click here to edit this source</a>.</p>'
-elif result["message"] != NO_ACTION:
-    message = '<p class="warning">'+result["message"]+'</p>'
-else:
-    # there was no form submitted so don't print a warning
-    pass
 
+# determine the result
+if result["event"] == ADDED:
+    message = '<p class="highlight">Added source ' + result["sourceId"] + ' to the database. <a href="../source_view.html?sourceId=' + result["sourceId"] + '">Click here to edit this source</a>.</p>'
+
+elif result["event"] == SUCCESS:
+    message = '<p class="success">'+result["message"]+'</p>'
+    
+elif result["event"] == WARNING:
+    message = '<p class="warning">'+result["message"]+'</p>'
+    
+
+# display the page
 recenthash = get_bitbucket_recent_hash()
 gitfilelist = get_bitbucket_file_list(recenthash)
 print_html_form (message, recenthash, gitfilelist)

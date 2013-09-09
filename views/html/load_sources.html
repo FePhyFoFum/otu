@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <title>OTU: get data in there</title>
+
+        $$HEAD_CONTENT$$
+
+        <style>
+body {
+    padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+
+} .header {
+    border-style: solid;
+    border-color: lightblue;
+    border-width: 2px 0 0 0;
+
+} .highlight, .warning, .success {
+    padding: 0.4em 0.4em 0.4em  0.6em;
+    color: white;
+    font-size: 1.2em;
+
+} .highlight a, .warning a, .success a {
+    font-weight: bold;
+    color: white;
+
+} .highlight {
+    background-color: #37f;
+
+} .warning {
+    background-color: #f44;
+
+} .success {
+    background-color: #e80;
+    
+}
+        </style>
+    </head>
+    <body>
+
+        $$NAVBAR$$
+
+        <div class="container">
+            <h1>Add and List sources in the local database</h1>
+            <div>$MESSAGE$</div>
+            <div class="row">
+                <div id="source-contain" class="span5">
+                    <h3 class="header">Nexson files</h3>
+                    <h4>Upload From Git</h4>
+                    <form action="load_sources.py" method="POST" class="form-inline" id="gitform" enctype="multipart/form-data">
+                        <input type="hidden" id="hidden_nexson_from_git" name="hidden_nexson_from_git" value="true"/>
+                        <input type="hidden" id="recenthash", name="recenthash" value="$RECENTHASH$"/>
+                        Source Id:
+                        <select name="nexsonid" id="nexsonid" form="gitform">
+                            $GITFILELIST$
+                        </select>
+                        <button name="submit" type="submit" class="btn">Submit</button>
+                    </form>
+                    <h4>Upload File</h4>
+                    <form action=load_sources.py method="POST" enctype="multipart/form-data">
+                        <input type="hidden" id="hidden_nexson_from_file" name="hidden_nexson_from_file" value="true"/>
+                        <input name="file" type="file"><br>
+                        <button class="btn disabled">Coming soon</button>
+                    </form>
+                    <br/>
+                    <h3 class="header">Newick files</h3>
+                    <h4>Upload File</h4>
+                    <form action=load_sources.py method="POST" enctype="multipart/form-data">
+                        <input type="hidden" id="hidden_newick_from_file" name="hidden_newick_from_file" value="true"/>
+                        Source Id:<input type="text" id="sourceId" name="sourceId"/> <br/>
+                        File name: <input name="file" type="file"><br>
+                        <button name="submit" type="submit" class="btn">Submit</button>
+                    </form>
+                </div>
+                <div id="source-contain" class="span7">
+                    <h3>Imported sources</h3>
+                    <table id="sources" class="table table-striped">
+                        <thead>
+                            <tr><th>Source</th></tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script language ="javascript" type = "text/javascript" >
+
+function getSourceList() {
+    var sourcelinkurl ="source_view.py?sourceId="
+    var sourceListService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getSourceList";
+    var xobj = getXhr(sourceListService, function() {
+        var response = JSON.parse(xobj.responseText);
+        $(response.sources).each(function(i, sourceId){
+             $('#sources').append('<tr><td> <a href="' + sourcelinkurl + sourceId + '">' + sourceId + '</a> </td></tr>');       
+        });
+    });
+    xobj.send();
+}
+
+// ===== onload
+
+$(document).ready(getSourceList());
+
+        </script> 
+    </body>
+</html>
