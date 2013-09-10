@@ -144,38 +144,6 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		return knownRemotes;
 	}
 	
-	/*
-	 * Returns a JSON array string of sources that have imported trees.
-	 * @return
-	 *
-	public String getJSONOfSourceIdsForImportedTrees() {
-
-		// find all imported trees, get their study ids from the attached metadata nodes
-		HashSet<String> sourceIds = new HashSet<String>();
-		IndexHits<Node> sourcesFound = null;
-		try {
-			sourcesFound = sourceMetaNodesBySourceId.query(LOCAL_LOCATION+"SourceId"+":*");
-			for (Node s : sourcesFound) {
-				sourceIds.add((String) s.getProperty(NodeProperty.SOURCE_ID.name));
-			}
-		} finally {
-			sourcesFound.close();
-		}
-		
-		// write the string
-		StringBuffer json = new StringBuffer("{ \"sources\" : [");
-		Iterator<String> sourceIdsIter = sourceIds.iterator();
-		while (sourceIdsIter.hasNext()) {
-			json.append("\"" + sourceIdsIter.next() + "\" ");
-			if (sourceIdsIter.hasNext()) {
-				json.append(",");
-			}
-		}
-		json.append("] }");
-		
-		return json.toString();
-	} */
-	
 	/**
 	 * Return a list containing all the tree ids for the specified source id.
 	 * @return
@@ -207,36 +175,6 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		results.put("sources", sourceIds);
 		return results;
 	}
-		
-	/*
-	 * Return a JSON string of source ids and corresponding tree ids for all locally-imported sources.
-	 * @return
-	 *
-	@Deprecated
-	public String getJSONOfSourceIdsAndTreeIdsForImportedTrees() {
-		
-		StringBuffer retstr = new StringBuffer("{ \"studies\" : [");
-		IndexHits<Node> hits = treeRootNodesByTreeId.query(LOCAL_LOCATION + "TreeId", "*");
-		try {
-			while (hits.hasNext()) {
-				retstr.append("[ \"");
-				Node x = hits.next();
-				retstr.append((String) x.getSingleRelationship(RelType.METADATAFOR, Direction.INCOMING)
-						.getStartNode().getProperty(NodeProperty.SOURCE_ID.name));
-				retstr.append("\", \"");
-				retstr.append((String) x.getProperty(NodeProperty.TREE_ID.name));
-				retstr.append("\"]");
-				if (hits.hasNext()) {
-					retstr.append(",");
-				}
-			}
-		} finally {
-			hits.close();
-		}
-		retstr.append("] }");
-		return retstr.toString();
-
-	} */
 	
 	/**
 	 * Return a list containing all the tree ids for the specified source id.
@@ -453,11 +391,11 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(RelType.CHILDOF, Direction.INCOMING);
 		JadeNode root = new JadeNode();
 		HashMap<Node, JadeNode> traveledNodes = new HashMap<Node, JadeNode>();
-		int maxtips = maxNodes;
+//		int maxtips = maxNodes;
 		HashSet<Node> includednodes = new HashSet<Node>();
 		HashSet<Node> parents = new HashSet<Node>();
 		for (Node curGraphNode : CHILDOF_TRAVERSAL.breadthFirst().traverse(inRoot).nodes()) {
-			if (includednodes.size() > maxtips && parents.size() > 1) {
+			if (includednodes.size() > maxNodes && parents.size() > 1) {
 				break;
 			}
 			JadeNode curNode = null;

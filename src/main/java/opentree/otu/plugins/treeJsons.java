@@ -1,18 +1,11 @@
 package opentree.otu.plugins;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
@@ -26,14 +19,11 @@ import opentree.otu.constants.RelType;
 import opentree.otu.exceptions.NoSuchTreeException;
 
 import org.json.simple.JSONObject;
-import org.json.simple.parser.ContainerFactory;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.server.plugins.*;
-import org.neo4j.server.rest.repr.JSONToRepresentationConverter;
 import org.neo4j.server.rest.repr.OpentreeRepresentationConverter;
 import org.neo4j.server.rest.repr.Representation;
 
@@ -81,7 +71,8 @@ public class treeJsons extends ServerPlugin{
 
 		// return result
 		Map<String, Object> result = new HashMap<String, Object>();
-		result.put("worked", true);
+		result.put("event", "success");
+		result.put("treeId", treeId);
 		return OpentreeRepresentationConverter.convert(result);
 	}
 	
@@ -119,7 +110,7 @@ public class treeJsons extends ServerPlugin{
 	 * @param nodeId
 	 * @return
 	 */
-	@Description( "Return a tree in JSON format, starting from the indicated tree node" )
+	@Description( "Return a string containing a JSON string for the subtree below the indicated tree node" )
 	@PluginTarget( GraphDatabaseService.class )
 	public String getTreeJson(@Source GraphDatabaseService graphDb,
 			@Description( "The Neo4j node id of the node to be used as the root for the tree (can be used to extract subtrees as well).")
@@ -136,17 +127,14 @@ public class treeJsons extends ServerPlugin{
 	@Description( "Get tree metadata" )
 	@PluginTarget( GraphDatabaseService.class )
 	public Representation getTreeMetaData(@Source GraphDatabaseService graphDb,
-//			@Description( "study ID") //  should we be using "source ID" for consistency?
-//			@Parameter(name = "studyID", optional = false) String studyID,
 			@Description( "The database tree id for the tree")
 			@Parameter(name = "treeId", optional = false) String treeId) {
 		
 		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
+		Node root = browser.getTreeRootNode(treeId, browser.LOCAL_LOCATION);
 
-		// TODO: add that the source don't exist // not sure what this means...
 
 		Node root = browser.getTreeRootNode(treeId, browser.LOCAL_LOCATION);
-//		String metadata = browser.getMetadataForTree(root);
 		return OpentreeRepresentationConverter.convert(browser.getMetadataForTree(root));
 	}
 	
@@ -155,13 +143,12 @@ public class treeJsons extends ServerPlugin{
 	public String getSourceIdForTreeId(@Source GraphDatabaseService graphDb,
 			@Description( "The tree id to use")
 			@Parameter(name = "treeId", optional = false) String treeId) {
-		
-//		String metadata = manager.getStudyIDFromTreeID(treeId);
-
+	
 		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
 
 		Node treeRoot = browser.getTreeRootNode(treeId, browser.LOCAL_LOCATION);
 		Node sourceMeta = treeRoot.getSingleRelationship(RelType.METADATAFOR, Direction.INCOMING).getStartNode();
+
 		return (String) sourceMeta.getProperty(NodeProperty.SOURCE_ID.name);
 	}
 	
@@ -177,11 +164,11 @@ public class treeJsons extends ServerPlugin{
 	
 	@Description ("Hit the TNRS for all the names in a subtree. Return the results.")
 	@PluginTarget( Node.class )
-	public Representation doTNRSForDescendantsOf(@Source Node root,
-//		@Description ("The root of the subtree to use for TNRS") @Parameter (name="rootNodeId", optional=false) Long rootNodeId, 
+	public Representation doTNRSForDescendants(@Source Node root,
 		@Description ("The url of the TNRS service to use. If not supplied then the public OT TNRS will be used.")
 			@Parameter (name="TNRS Service URL", optional=true) String tnrsURL,
-		@Description ("NOT IMPLEMENTED. If it were, this would just say: If set to false (default), only the original otu labels will be used for TNRS. If set to true, currently mapped names will be used (if they exist).")
+		@Description ("NOT IMPLEMENTED. If it were, this would just say: If set to false (default), only the original " +
+				"otu labels will be used for TNRS. If set to true, currently mapped names will be used (if they exist).")
 			@Parameter(name="useMappedNames", optional=true) boolean useMappedNames) throws IOException, ParseException {
 		
 		LinkedList<Long> ids = new LinkedList<Long>();
@@ -202,40 +189,12 @@ public class treeJsons extends ServerPlugin{
 			tnrsURL = "http://dev.opentreeoflife.org/taxomachine/ext/TNRS/graphdb/contextQueryForNames/";
 		}
 		
-		/*
-		// open the connection to the TNRS
-		URL url = new URL(tnrsURL);
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-		conn.setDoOutput(true);
-		conn.setRequestMethod("POST");
-		conn.setRequestProperty("Content-Type", "Application/json");
- 
-		// send the data
-		OutputStream os = conn.getOutputStream(); */
-		
+		// gather the data to be sent to tnrs
 		Map<String, Object> query = new HashMap<String, Object>();
 		query.put("names", names);
 		query.put("idInts", ids);
-		query.put("includeDubious", "true");
-		
-		// =====
-		
-/*		// build the query
-        String queryString = "{\"data\":\"";
-        boolean isFirst = true;
-        for (String s : searchStrings) {
-            if (isFirst)
-                isFirst = false;
-            else
-                queryString += "\n";
 
-            queryString += id + "|" + s;
-        }
-        queryString += "\"}"; */
-
-//        System.out.println(queryString);
-
-        // set up the connection to GNR
+        // set up the connection
         ClientConfig cc = new DefaultClientConfig();
         Client c = Client.create(cc);
         WebResource tnrs = c.resource(tnrsURL);
@@ -245,11 +204,14 @@ public class treeJsons extends ServerPlugin{
         		.type(MediaType.APPLICATION_JSON_TYPE).post(String.class, new JSONObject(query).toJSONString());
 
 		// save the result to a local file
-        String savedResultsFilePath = "tnrs." + root.getId() + ".json";
         
+        // TODO: the tnrs files get saved into the neo4j directory root. it would be better to save them in the
+        // otu directory, but to do that we will have to do some some finagling...
+        String savedResultsFilePath = "tnrs." + root.getId() + "." + System.currentTimeMillis() + ".json";
+        File resultsFile = new File(savedResultsFilePath);
         BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter( new FileWriter( savedResultsFilePath));
+            writer = new BufferedWriter( new FileWriter(resultsFile));
             writer.write(respJSON);
 
         } finally {
@@ -258,10 +220,11 @@ public class treeJsons extends ServerPlugin{
         	}
         }
         
-        // return some JSON with the file location so python can grab the file
+        // return some JSON with the information for to use when reloading the page
         Map<String, Object> results = new HashMap<String, Object>();
-        results.put("worked", true);
-        results.put("results_file", savedResultsFilePath);
+        results.put("event", "success");
+        results.put("treeId", DatabaseUtils.getRootOfTreeContaining(root).getProperty(NodeProperty.TREE_ID.name));
+        results.put("results_file", resultsFile.getAbsolutePath());
 		
         return(OpentreeRepresentationConverter.convert(results));
 	}

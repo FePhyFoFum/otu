@@ -195,7 +195,7 @@ message = ""
 
 # determine the result
 if result["event"] == ADDED:
-    message = '<p class="highlight">Added source ' + result["sourceId"] + ' to the database. <a href="../source_view.html?sourceId=' + result["sourceId"] + '">Click here to edit this source</a>.</p>'
+    message = '<p class="highlight">Added source ' + result["sourceId"] + ' to the database. <a href="source_view.py?sourceId=' + result["sourceId"] + '">Click here to edit this source</a>.</p>'
 
 elif result["event"] == SUCCESS:
     message = '<p class="success">'+result["message"]+'</p>'

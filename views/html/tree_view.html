@@ -23,8 +23,21 @@ body {
 	padding: 0.2em 0.5em 0.3em 0.5em;
 	width: 20em;
 
+} #resultsSummary {
+    margin-top: 0.5em;
+
 }
         </style>
+        <script>
+
+// if python is provided with tnrs results, it will print them here, and they will
+// be available as a javascript object when the page is loaded by the browser
+var tnrsResults=$TNRS_RESULTS$;
+
+// also printed by python if available
+var treeId=$TREE_ID$;
+
+        </script>
     </head>
     <body>
 
@@ -53,15 +66,20 @@ body {
                 <button type="button" class="btn btn-large btn-primary" name="cac" value=2>Reroot</button>
                 <button type="button" class="btn btn-large btn-primary" name="cac" value=3>Choose Ingroup</button>
             </div>
-            <button type="button" class="btn btn-large btn-danger" id="deleteTreeBtn" onClick="deleteTree()" id>Delete Tree</button>
+            <div class="btn-group" id="taxonMappingButtons">
+                <button type="button" class="btn btn-large btn-warning" id="tnrsButton">Resolve taxon names</button>
+            </div>
+            <button type="button" class="btn btn-large btn-danger" id="deleteTreeButton">Delete Tree</button>
+            <div id="resultsSummary"></div>
         </div>
+
         <script>
 
 // geometry
 
 var margin = {top: 20, right: 120, bottom: 20, left: 120},
     width = 4000 - margin.right - margin.left,
-    height = 12000 - margin.top - margin.bottom;
+    height = 2000 - margin.top - margin.bottom;
 
 var nheight = 30;
 
@@ -95,24 +113,24 @@ function setupPage(sourceId, treeId) {
     var title
     if (sourceId) {
         title = 'Editing tree ' + treeId + ' from source '
-            + '<a href="source_view.html?sourceId=' + sourceId + '">' + sourceId + '</a>';
+            + '<a href="source_view.py?sourceId=' + sourceId + '">' + sourceId + '</a>';
     } else {
         title = "No tree selected"
     }
     document.getElementById("treeId").innerHTML = title;
     
-    // setup delete button
-    $("#deleteTreeBtn").click(function() {
-        deleteTree(sourceId, treeId);
-    });
+    // setup buttons
+    $("#deleteTreeButton").click(function() { deleteTree(sourceId, treeId); });
+    $("#tnrsButton").click(function() { doTNRS(treeId); });
     
     resetRadio();
 }
 
 function resetRadio() {
     $('button[id="refocusButton"]').button('toggle');
-//    $("refocusButton").button("toggle");
 }
+
+// ===== dropdown menus for tree selection
 
 // gets a list of all trees *within the current study*
 function getSourceTreeList(sourceId, treeId) {
@@ -141,7 +159,7 @@ function getSourceTreeList(sourceId, treeId) {
                 .removeClass("disabled");
         }
     });
-    xhr.send(JSON.stringify({"sourceId":sourceId ? sourceId : "nothing","excludedTreeIds":[treeId ? treeId : "nothing"]}));
+    xhr.send(JSON.stringify({"sourceId":sourceId ? sourceId : "nothing", "excludedTreeIds":[treeId ? treeId : "nothing"]}));
 }
 
 // gets a list of all local trees for all studies
@@ -149,7 +167,6 @@ function getAllLocalTreeList(treeId) {
     var treeIdsService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getTreeIdsForAllLocalSources";
     var xhr = getXhr(treeIdsService, function() {
         var response = JSON.parse(xhr.responseText);
-//            alert(JSON.stringify(response));
         document.getElementById("loadSelectAll").innerHTML = "";
         $(response.trees).each(function(i, tid) {
             $('#loadSelectAll')
@@ -179,30 +196,43 @@ function getAllLocalTreeList(treeId) {
 function setupTree(nodeId) {
     var treeJSONService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getTreeJson";
     var xhr = getXhr(treeJSONService, function() {
+        
         var jsonrespstr = xhr.responseText;
-    //  alert(jsonrespstr);
-        var evjson = eval(jsonrespstr);
-    //  alert(evjson);
+        var evjson = eval(jsonrespstr); // TODO: convert this to representation
+
+//        alert(JSON.stringify(evjson));
+        
         d3.json("", function(error, flare) {
             root = JSON.parse(evjson);
             root.x0 = height / 2;
             root.y0 = 0;
+                                    
             update(root);
+
+//            alert(Object.keys(tnrsResultsById));
+            
         });
+            
     });
     xhr.send(JSON.stringify({"nodeId":nodeId}));
 
 }
 
+var tnrsResultsById = {}; // the latest TNRS results
+var taxonMappings = {}; // changes to be sent to the db
+
 // Create the tree from the JSON
 function update(source) {
-  
+
     // Compute the new tree layout.
     var nodes = tree.nodes(root).reverse(),
         links = tree.links(nodes);
  
     var tips = 0;
-    nodes.forEach(function(d) { if(!d.children){tips+=1;} });
+    nodes.forEach(function(d) {
+        if(!d.children){tips+=1;}
+//        nodesById[d.id] = d; // make a map of nodes by id...
+    });
     
     nheight = tips * 20;
     //alert(nheight);
@@ -214,7 +244,7 @@ function update(source) {
 
     // Update the nodes…
     var node = svg.selectAll("g.node")
-      .data(nodes, function(d) { return d.id || (d.id = ++i); });
+        .data(nodes, function(d) { return d.id || (d.id = ++i); });
 
     // Enter any new nodes at the parent's previous position.
     var nodeEnter = node.enter().append("g")
@@ -253,9 +283,8 @@ function update(source) {
         
         })
         
-        // example of right click, same behavior here as normal click
+        // example of right click, currently same behavior here as normal click
         .on("contextmenu", function(d, index) {
-//          alert("rightclick");
             d3.event.preventDefault();
             if (d.name) {
                 // stop showing browser menu
@@ -267,14 +296,51 @@ function update(source) {
         .attr("r", 1e-6)
         .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
+    nodeEnter.append("rect")
+        .attr("height", 12)
+        .attr("width", function(d) { return d.name ? d.name.length * 6.5 : 0; })
+        .attr('x', 8)
+        .attr("y", -6)
+//        .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+        .style("stroke-opacity", 0)
+        .style("fill-opacity", function(d) { return tnrsResultsById[d.id] ? 1 : 0; })
+
+        // fill color depends on name status
+        .style("fill", function(d) {
+            if (tnrsResultsById[d.id]) {
+                if ((tnrsResultsById[d.id]).length > 1 ) {
+                    return "f73";
+                } else if ((tnrsResultsById[d.id])[0].isHomonym) {
+                    return "#ca0";
+                } else {
+                    return "0ad";
+                }
+            } else {
+                return "black";
+            }
+        });
+
     nodeEnter.append("text")
         .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
         .attr("dy", ".35em")
         .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
-        .text(function(d) { return d.size ? d.name+" ("+d.size+")": d.name;})
-        .style("font-size","10px") 
-        .style("font-family","Arial")
-        .style("fill-opacity", 1e-6);
+        .text(function(d) { return d.size ? d.name + " (" + d.size + ")": d.name;})
+        .style("font-size", "10px") 
+        .style("font-family", "Arial")
+//        .style("fill-opacity", 1)
+
+        // text color depends on name status
+        .style("fill", function(d) { return tnrsResultsById[d.id] ? "white" : "black" });
+/*            if (tnrsResultsById[d.id]) {
+                if ((tnrsResultsById[d.id]).length > 1 ) {
+                    return "#fff";
+                } else if ((tnrsResultsById[d.id])[0].isHomonym) {
+                    return "#fff";
+                } else {
+                    return "#000";
+                }
+            }
+        }); */
 
     // Transition nodes to their new position.
     var nodeUpdate = node.transition()
@@ -282,12 +348,20 @@ function update(source) {
         .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
 
     nodeUpdate.select("circle")
+
         //.attr("r", 4.5)
         .attr("r", function(d) { return d.ingroup ? 4 : 3;})
-        .style("stroke",function(d) { return d.ingroup ? "#35f" : "grey";})
+//        .style("stroke",function(d) { return d.ingroup ? "grey" : "lightgrey"; })
+        .style("stroke", "grey")
         .style("stroke-width", function(d) { return d.ingroup ? 2 : 1 ;})
-        .style("fill",function(d) { return d.notcomplete ? "lightgreen" : "#fff";});
+        .style("fill", function(d) {
+            var fill = d.ingroup ? "grey" : "white"; 
+            fill = d.notcomplete ? "lightgreen" : fill;
+            return fill;
+        });
+//        .style("fill",function(d) {  ; })
         //.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+        ;
 
     nodeUpdate.select("text")
         .style("fill-opacity", 1);
@@ -309,7 +383,7 @@ function update(source) {
         .data(links, function(d) { return d.target.id; });
 
     // Enter any new links at the parent's previous position.
-    link.enter().insert("path", "g")
+    link.enter().insert("path", "g") // TODO: would be nice to color the strokes by ingroup/outgroup
         .attr("class", "link")
         .style("fill","none")
         .style("stroke","#ccc")
@@ -340,8 +414,49 @@ function update(source) {
     });
 }
 
+// draw the tnrs results on the tree
+function displayTNRSResults() {
+    
+    $("#resultsSummary").append("TNRS: matched " + tnrsResults.matched_name_ids.length + " out of " +
+        (tnrsResults.unmatched_name_ids.length + tnrsResults.matched_name_ids.length) +
+        " names, including " + tnrsResults.unambiguous_name_ids.length +
+        " exact, non-homonym matches. The taxonomic context is <strong>" + tnrsResults.context + "</strong>.");
+    
+    $(tnrsResults.results).each(function(i, nameResult) {
+        tnrsResultsById[nameResult.id] = nameResult.matches;
+    });
+    
+/*    $("#taxonMappingButtons").append($("<button>")
+        .attr("id","saveTaxonMappingsButton")
+        .addClass("btn btn-success btn-large")
+        .click(function() { saveTaxonMappings() })
+        .append("Save taxon mappings"));
+    
+/*    $(tnrsResults.results).each(function(i, nameResult) {
+        tnrsResultsById[nameResult.id] = nameResult.matches;
+        
+        taxonMappings[nameResult.id] = {};
+        var changes = taxonMappings[nameResult.id];
+        
+        changes.["ot:ottolId"]= i;
+    });
+
+    alert(JSON.stringify(taxonMappings)); */    
+}
+
+/*
+function saveTaxonMappings() {
+
+    // this should already exist, and consist of info on taxon mappings to be sent to the db
+    taxonMappings;
+    
+    alert(JSON.stringify(taxonMappings));
+
+}  */
+
 // ===== node editor
 
+// open the node editor for the passed node (called by .click() method of nodes)
 function updateNodeEditor(node) {
     $('#nodeEditor').remove();
     var nodeEditor = document.createElement("div");
@@ -350,7 +465,7 @@ function updateNodeEditor(node) {
         .css("left",yo + node.y - 30)
     $(Object.keys(node)).each(function(i, key) {
         $(nodeEditor).append(key + " " + node[key] + "<br/>");
-    });
+    });    
     $("body").append(nodeEditor);
 }
 
@@ -358,6 +473,7 @@ function updateNodeEditor(node) {
 $(document).click(function(event) {
     var target = $(event.target);
     if (target.attr('id')) {
+    
         // if we didn't click in the node editor
         if (!target.attr('id').match(/^nodeEditor/) && target.parents('#nodeEditor').length == 0) {
             $('#nodeEditor').remove();
@@ -373,34 +489,89 @@ function getRootIdFromTreeId(treeId) {
     xhr = getXhr(rootNodeService);
     xhr.send(JSON.stringify({"treeId":treeId}));
     var jsonrespstr = xhr.responseText;
-//    alert(jsonrespstr);
     var evjson = eval(jsonrespstr);
     return evjson;
 }
 
 // Get the source id for a tree id
-function getSourceIdForTreeId(treeId){
-    if(!treeId || treeId == ""){
-        return ""; // should be undefined?
+function getSourceIdForTreeId(treeId) {
+
+    if( treeId == false || treeId == "" ) {
+        return false;
     }
+    
     var sourceIdService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getSourceIdForTreeId";
     var xhr = getXhr(sourceIdService);
     xhr.send(JSON.stringify({"treeId":treeId}));
     var jsonrespstr = xhr.responseText;
-//  alert(jsonrespstr);
     var evjson = eval(jsonrespstr);
     return evjson;
 }
 
-// ===== server calls for making changes to the graph (tree editing)
+// ===== functions bound to buttons (server calls)
+
+function doTNRS() {
+
+    // need to adjust this check to work with whatever we do to store tnrs results... just check the tree properties?
+    if (Object.keys(tnrsResultsById).length > 0) {
+
+        // TODO: would be better to have "cancel" option set as default...
+        var proceed = confirm("TNRS results already exist for this tree. Re-submitting the TNRS request will overwrite the existing results with new ones. Are you sure you want to do this?");
+        var x;
+        if (proceed) {
+            x = "Resubmit!";
+        } else {
+            x = "Cancel!";
+            return;
+        }
+    }
+
+    var tnrsService = "http://localhost:7474/db/data/ext/treeJsons/node/" + getRootIdFromTreeId(treeId) + "/doTNRSForDescendants";
+    xhr = getXhr(tnrsService, function() {
+        var response = JSON.parse(xhr.responseText);
+        if (response.event == "success") {
+                        
+            // add a form to the page, and fill it in with information about the tnrs results, which
+            // are saved in a file on the hard drive.  python will receive this info on page reload
+            // and will print the contents of that file into a javascript variable called tnrsResults.
+            
+            var tnrsForm = $(document.createElement("form"))
+                .addClass("hidden")
+                .attr("name", "tnrsForm")
+                .attr("action", "tree_view.py")
+                .attr("method", "POST")
+                .append($("<input>")
+                    .addClass("hidden")
+                    .attr("name", "tnrs_results_path")
+                    .attr("type", "hidden")
+                    .attr("value", response.results_file))
+                .append($("<input>")
+                    .addClass("hidden")
+                    .attr("name", "treeId")
+                    .attr("type", "hidden")
+                    .attr("value", treeId));
+            
+            tnrsForm.submit();
+        
+        } else {
+            alert(response.message);
+        }
+    });
+    
+    alert("Your request for taxonomic name resolution has been submitted. This page will reload when the request is "
+        + "complete.\n\nThis could take some time if the tree contains a large number of taxa.");
+    
+    xhr.send(JSON.stringify({"useMappedNames": false}));
+}
 
 function deleteTree(sourceId, treeId){
     var deleteTreeService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/deleteTreeFromTreeId";
     xhr = getXhr(deleteTreeService, function() {
-        var jsonrespstr = xhr.responseText;
-//      alert(jsonrespstr);
-        var evjson = eval(jsonrespstr);
-        window.location.href="source_view.html?sourceId=" + sourceId;
+        var response = JSON.parse(xhr.responseText);
+        if (response.event == "success") {
+            alert("Tree " + response.treeId + " has been deleted.");
+        }
+        window.location.href="source_view.py?sourceId=" + sourceId;
     });
     xhr.send(JSON.stringify({"sourceId": sourceId, "treeId": treeId}));
 }
@@ -408,7 +579,6 @@ function deleteTree(sourceId, treeId){
 function designateIngroup(nodeId){
 	var ingroupService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/ingroupSelect";
     xhr = getXhr(ingroupService, function() {
-//		alert(xhr.responseText);
         var jsonrespstr = xhr.responseText;
         var evjson = eval(jsonrespstr);
         setupTree(evjson);
@@ -420,7 +590,6 @@ function reroot(nodeId){
     var rerootService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/rerootTree";
     xhr = getXhr(rerootService, function() {
         var jsonrespstr = xhr.responseText;
-    //  alert(jsonrespstr);
         var evjson = eval(jsonrespstr);
         setupTree(evjson);
     });
@@ -438,11 +607,18 @@ var bbox; // the bounding box element for the tree svg
 // on page load
 $(document).ready(function() {
 
-    treeId = getQueryVariable('treeId');
+    // if the tree id was not printed into a javascript variable by python
+    if (!treeId) {
+    
+        // attempt to get the tree id from the incoming form
+        treeId = getQueryVariable('treeId');
+    }
+    
     sourceId = false;
+//    alert(treeId);  
 
     if (!treeId) {
-        treeId = "undefined"
+        // if no tree id, disable buttons
         $("button").each(function(i, element) {
             $(element).addClass("disabled").click(undefined);
         });
@@ -450,23 +626,27 @@ $(document).ready(function() {
         sourceId = getSourceIdForTreeId(treeId);
     }
 
+    setupPage(sourceId, treeId);
+
     var rootNodeId;
-    if (treeId != "undefined") {
+    if (treeId) {
         rootNodeId = getRootIdFromTreeId(treeId);
 
-        // do it twice to get the height right <- this doesn't appear to work...
+        // do it twice to get the height right // TODO: fix this...
         setupTree(rootNodeId);
         setupTree(rootNodeId);
 
-        d3.select(self.frameElement).style("height", "800px");
+//        d3.select(self.frameElement).style("height", "800px");
     }
 
+    if (tnrsResults) {
+        displayTNRSResults();
+    }
+    
     // fill the tree selector dropdowns even if there is no tree loaded 
     getSourceTreeList(sourceId, treeId);
     getAllLocalTreeList(treeId);
-    
-    setupPage(sourceId, treeId);
-    
+        
 });
 
 // when the tree svg loads, get its position for future reference
