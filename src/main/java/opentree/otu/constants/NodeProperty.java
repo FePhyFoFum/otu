@@ -13,7 +13,7 @@ public enum NodeProperty {
 	 * The taxon name associated with this node. SHOULD BE THE MAPPED NAME, not the original. Should not be set if the
 	 * node has not been mapped (although I have no idea if this is actually the case).
 	 */
-	NAME ("name", String.class),
+	NAME ("name", String.class), // TODO: clean this / switch it over when peter has changed the nexson output
 	
 	/**
 	 * A unique string used to identify this tree within the db. The convention is to use the study id concatenated
@@ -71,7 +71,7 @@ public enum NodeProperty {
 	NEXSON_ID ("nexsonid", String.class),
 
 	/**
-	 * An id property used by phylografter. Not relevant to OTU, btu we include it here to allow us to hide it when returning metadata.
+	 * An id property used by phylografter. Not relevant to OTU, but we include it here to allow us to hide it when returning metadata.
 	 */
 	PHYLOGRAFTER_ID ("id", long.class),
 	
@@ -112,6 +112,16 @@ public enum NodeProperty {
 	 */
 	IS_WITHIN_INGROUP("within_ingroup", boolean.class),
 	
+	/**
+	 * Whether or not this tree contains otu nodes that have been mapped to OTT taxa. Used for user feedback during TNRS.
+	 */
+	CONTAINS_TAXON_MAPPINGS ("contains_taxon_mappings", boolean.class),
+	
+	/**
+	 * The name of the taxomachine context that has been determined for this tree.
+	 */
+	CONTEXT_NAME ("context_name", String.class),
+	
 	// ===== ot namespace node properties
 	
 	/**
@@ -145,7 +155,12 @@ public enum NodeProperty {
 	/**
 	 * The ott id associated with the node. A property of tip nodes. Should not be set if the node has not been mapped.
 	 */
-	OT_OTT_ID ("ot:ottolid", Long.class),	
+	OT_OTT_ID ("ot:ottolid", Long.class), // TODO: will change to ot:ottId, change here when necessary
+	
+	/**
+	 * The ottol name associated with this taxon
+	 */
+	OT_OTT_TAXON_NAME ("ot:ottTaxonName", String.class),
 	
 	/**
 	 * The citation string for published studies. A property of source meta nodes.

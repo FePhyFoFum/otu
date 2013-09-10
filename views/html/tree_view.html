@@ -30,12 +30,16 @@ body {
         </style>
         <script>
 
+/*
+
 // if python is provided with tnrs results, it will print them here, and they will
 // be available as a javascript object when the page is loaded by the browser
 var tnrsResults=$TNRS_RESULTS$;
 
 // also printed by python if available
 var treeId=$TREE_ID$;
+
+*/
 
         </script>
     </head>
@@ -66,9 +70,7 @@ var treeId=$TREE_ID$;
                 <button type="button" class="btn btn-large btn-primary" name="cac" value=2>Reroot</button>
                 <button type="button" class="btn btn-large btn-primary" name="cac" value=3>Choose Ingroup</button>
             </div>
-            <div class="btn-group" id="taxonMappingButtons">
-                <button type="button" class="btn btn-large btn-warning" id="tnrsButton">Resolve taxon names</button>
-            </div>
+            <button type="button" class="btn btn-large btn-warning" id="tnrsButton">Resolve taxon names</button>
             <button type="button" class="btn btn-large btn-danger" id="deleteTreeButton">Delete Tree</button>
             <div id="resultsSummary"></div>
         </div>
@@ -414,6 +416,7 @@ function update(source) {
     });
 }
 
+/*
 // draw the tnrs results on the tree
 function displayTNRSResults() {
     
@@ -441,7 +444,7 @@ function displayTNRSResults() {
         changes.["ot:ottolId"]= i;
     });
 
-    alert(JSON.stringify(taxonMappings)); */    
+    alert(JSON.stringify(taxonMappings));
 }
 
 /*
@@ -530,11 +533,20 @@ function doTNRS() {
     xhr = getXhr(tnrsService, function() {
         var response = JSON.parse(xhr.responseText);
         if (response.event == "success") {
-                        
-            // add a form to the page, and fill it in with information about the tnrs results, which
+
+        $("#resultsSummary").append("TNRS: matched " + response.matched_name_ids.length + " out of " +
+            (response.unmatched_name_ids.length + response.matched_name_ids.length) +
+            " names, including " + response.unambiguous_name_ids.length +
+            " exact, non-homonym matches. The taxonomic context is <strong>" + response.context + "</strong>.");            
+ 
+        // TODO: should fix so we don't have to set up twice
+        setupTree(response.rootNodeId);
+        setupTree(response.rootNodeId);
+        
+/*            // add a form to the page, and fill it in with information about the tnrs results, which
             // are saved in a file on the hard drive.  python will receive this info on page reload
             // and will print the contents of that file into a javascript variable called tnrsResults.
-            
+           
             var tnrsForm = $(document.createElement("form"))
                 .addClass("hidden")
                 .attr("name", "tnrsForm")
@@ -551,7 +563,7 @@ function doTNRS() {
                     .attr("type", "hidden")
                     .attr("value", treeId));
             
-            tnrsForm.submit();
+            tnrsForm.submit(); */
         
         } else {
             alert(response.message);
@@ -639,9 +651,9 @@ $(document).ready(function() {
 //        d3.select(self.frameElement).style("height", "800px");
     }
 
-    if (tnrsResults) {
+/*    if (tnrsResults) {
         displayTNRSResults();
-    }
+    } */
     
     // fill the tree selector dropdowns even if there is no tree loaded 
     getSourceTreeList(sourceId, treeId);

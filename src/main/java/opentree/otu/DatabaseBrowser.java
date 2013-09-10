@@ -405,10 +405,31 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 				curNode = new JadeNode();
 			}
 			traveledNodes.put(curGraphNode, curNode);
+			
 			if (curGraphNode.hasProperty(NodeProperty.NAME.name)) {
 				curNode.setName(GeneralUtils.cleanName(String.valueOf(curGraphNode.getProperty(NodeProperty.NAME.name))));
 				// curNode.setName(GeneralUtils.cleanName(curNode.getName()));
 			}
+
+			if (curGraphNode.hasProperty(NodeProperty.OT_OTT_ID.name)) {
+
+				Iterable<Relationship> tnrsHitRels = curGraphNode.getRelationships(RelType.TNRSMATCHFOR);
+				List<Object> tnrsHits = new LinkedList<Object>();
+
+				for (Relationship tnrsRel : tnrsHitRels) {
+					Map<String, Object> hit = new HashMap<String, Object>();
+					Node tnrsNode = tnrsRel.getOtherNode(curGraphNode);
+					for (String property : tnrsNode.getPropertyKeys()) {
+						hit.put(property, tnrsNode.getProperty(property));
+					}
+					tnrsHits.add(hit);
+				}
+				
+				if (!tnrsHits.isEmpty()) {
+					curNode.assocObject("tnrsHits", tnrsHits);
+				}
+			}
+
 			if (curGraphNode.hasProperty(NodeProperty.IS_WITHIN_INGROUP.name)) {
 				curNode.assocObject("ingroup", true);
 			}
@@ -445,6 +466,7 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 				curNode.assocObject("numchild", numchild);
 			}
 		}
+		
 		int curbackcount = 0;
 		boolean going = true;
 		JadeNode newroot = root;

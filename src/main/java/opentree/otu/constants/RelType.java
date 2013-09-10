@@ -17,5 +17,11 @@ public enum RelType implements RelationshipType {
 	/**
 	 * Connects remote study metadata nodes to the local studies that have been imported from them.
 	 */
-	LOCALCOPYOF;
+	LOCALCOPYOF,
+	
+	/**
+	 * Associates TNRS matches with graph nodes. Used when TNRS returns
+	 * multiple results that will require user-disambiguation.
+	 */
+	TNRSMATCHFOR;
 }

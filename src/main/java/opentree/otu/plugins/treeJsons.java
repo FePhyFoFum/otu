@@ -14,15 +14,19 @@ import jade.tree.*;
 import opentree.otu.DatabaseBrowser;
 import opentree.otu.DatabaseManager;
 import opentree.otu.DatabaseUtils;
+import opentree.otu.GraphDatabaseAgent;
 import opentree.otu.constants.NodeProperty;
 import opentree.otu.constants.RelType;
 import opentree.otu.exceptions.NoSuchTreeException;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.server.plugins.*;
 import org.neo4j.server.rest.repr.OpentreeRepresentationConverter;
 import org.neo4j.server.rest.repr.Representation;
@@ -168,7 +172,7 @@ public class treeJsons extends ServerPlugin{
 				"otu labels will be used for TNRS. If set to true, currently mapped names will be used (if they exist).")
 			@Parameter(name="useMappedNames", optional=true) boolean useMappedNames) throws IOException, ParseException {
 		
-		LinkedList<Long> ids = new LinkedList<Long>();
+		LinkedList<Long> nodeIds = new LinkedList<Long>();
 		LinkedList<String> names = new LinkedList<String>();
 		
 		// make a map of these with ids and original names
@@ -177,7 +181,7 @@ public class treeJsons extends ServerPlugin{
 			// TODO: allow the choice to use mapped or original names... currently that leads to nullpointerexceptions
 
 			if (otu.hasProperty(NodeProperty.NAME.name)) {
-				ids.add(otu.getId());
+				nodeIds.add(otu.getId());
 				names.add((String) otu.getProperty(NodeProperty.NAME.name));
 			}
 		}
@@ -189,7 +193,7 @@ public class treeJsons extends ServerPlugin{
 		// gather the data to be sent to tnrs
 		Map<String, Object> query = new HashMap<String, Object>();
 		query.put("names", names);
-		query.put("idInts", ids);
+		query.put("idInts", nodeIds);
 
         // set up the connection
         ClientConfig cc = new DefaultClientConfig();
@@ -199,7 +203,61 @@ public class treeJsons extends ServerPlugin{
         // send the query (get the response)
         String respJSON = tnrs.accept(MediaType.APPLICATION_JSON_TYPE)
         		.type(MediaType.APPLICATION_JSON_TYPE).post(String.class, new JSONObject(query).toJSONString());
+        
+        JSONParser parser = new JSONParser();
+        JSONObject response = (JSONObject) parser.parse(respJSON);
 
+        GraphDatabaseAgent graphDb = new GraphDatabaseAgent(root.getGraphDatabase()) ;
+        
+        Transaction tx = graphDb.beginTx();
+        
+        root.setProperty(NodeProperty.CONTEXT_NAME.name, response.get("context"));
+        root.setProperty(NodeProperty.CONTAINS_TAXON_MAPPINGS.name, true);
+        
+        try {
+	        // walk the results
+	        for (Object nameResult : (JSONArray) response.get("results")) {
+	
+	        	JSONArray matches = (JSONArray) ((JSONObject) nameResult).get("matches");
+	        	Node otuNode = graphDb.getNodeById((Long) ((JSONObject) nameResult).get("id"));
+	        	
+	            // if there is an exact match, update the node properties to reflect this
+	        	if (matches.size() == 1) {
+	        		JSONObject match = ((JSONObject) matches.get(0));
+	        		if ((Double) match.get("score") == 1.0) {
+	        			
+	        			otuNode.setProperty(NodeProperty.OT_OTT_ID.name, match.get("matched_ott_id"));
+	        			otuNode.setProperty(NodeProperty.OT_OTT_TAXON_NAME.name,  match.get("matched_name"));
+	        		}
+	        	} else {
+	        		// create TNRS result nodes holding each match's info
+	        		for (Object m : matches) {
+	        			JSONObject match = (JSONObject) m;
+	        			Node tnrsNode = graphDb.createNode();
+	        			for (Object property : match.keySet()) {
+	        				tnrsNode.setProperty((String) property, match.get(property));
+	        			}
+	        			tnrsNode.createRelationshipTo(otuNode, RelType.TNRSMATCHFOR);
+	        		}
+	        	}
+	        }
+	        tx.success();
+        } finally {
+        	tx.finish();
+        }
+        
+        // return relevant info
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("event", "success");
+        result.put("treeId", DatabaseUtils.getRootOfTreeContaining(root).getProperty(NodeProperty.TREE_ID.name));
+        result.put("rootNodeId", root.getId());
+        result.put("unmatched_name_ids", response.get("unmatched_name_ids"));
+        result.put("matched_name_ids", response.get("matched_name_ids"));
+        result.put("unambiguous_name_ids", response.get("unambiguous_name_ids"));
+        result.put("context", response.get("context"));
+        return OpentreeRepresentationConverter.convert(result);
+        
+        /*
 		// save the result to a local file
         
         // TODO: the tnrs files get saved into the neo4j directory root. it would be better to save them in the
@@ -223,6 +281,6 @@ public class treeJsons extends ServerPlugin{
         results.put("treeId", DatabaseUtils.getRootOfTreeContaining(root).getProperty(NodeProperty.TREE_ID.name));
         results.put("results_file", resultsFile.getAbsolutePath());
 		
-        return(OpentreeRepresentationConverter.convert(results));
+        return(OpentreeRepresentationConverter.convert(results)); */
 	}
 }
