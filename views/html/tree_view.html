@@ -53,7 +53,8 @@ body {
                 <button type="button" class="btn btn-large btn-primary" name="cac" value=2>Reroot</button>
                 <button type="button" class="btn btn-large btn-primary" name="cac" value=3>Choose Ingroup</button>
             </div>
-            <button type="button" class="btn btn-large btn-danger" id="deleteTreeBtn" onClick="deleteTree()" id>Delete Tree</button>
+            <button type="button" class="btn btn-large btn-warning" id="tnrsButton">Resolve taxon names</button>
+            <button type="button" class="btn btn-large btn-danger" id="deleteTreeButton">Delete Tree</button>
         </div>
         <script>
 
@@ -95,15 +96,20 @@ function setupPage(sourceId, treeId) {
     var title
     if (sourceId) {
         title = 'Editing tree ' + treeId + ' from source '
-            + '<a href="source_view.html?sourceId=' + sourceId + '">' + sourceId + '</a>';
+            + '<a href="source_view.py?sourceId=' + sourceId + '">' + sourceId + '</a>';
     } else {
         title = "No tree selected"
     }
     document.getElementById("treeId").innerHTML = title;
     
     // setup delete button
-    $("#deleteTreeBtn").click(function() {
+    $("#deleteTreeButton").click(function() {
         deleteTree(sourceId, treeId);
+    });
+    
+    // setup delete button
+    $("#tnrsButton").click(function() {
+        doTNRS(treeId);
     });
     
     resetRadio();
@@ -113,6 +119,8 @@ function resetRadio() {
     $('button[id="refocusButton"]').button('toggle');
 //    $("refocusButton").button("toggle");
 }
+
+// ===== dropdown menus for tree selection
 
 // gets a list of all trees *within the current study*
 function getSourceTreeList(sourceId, treeId) {
@@ -392,15 +400,36 @@ function getSourceIdForTreeId(treeId){
     return evjson;
 }
 
-// ===== server calls for making changes to the graph (tree editing)
+// ===== functions bound to buttons (server calls)
+
+function doTNRS() {
+    var tnrsService = "http://localhost:7474/db/data/ext/treeJsons/node/"+getRootIdFromTreeId(treeId)+"/doTNRSForDescendants";
+    xhr = getXhr(tnrsService, function() {
+        var response = JSON.parse(xhr.responseText);
+        if (response.event == "success") {
+            
+            // add a form to the page, indicating the location of the tnrs json and
+            // telling the python to load the json into a variable on page reload
+        
+        } else {
+            alert(response.message);
+        }
+    }, true);
+    
+    alert("Your request for taxonomic name resolution has been submitted. This page will reload when the request is "
+        + "complete, which could take some time for very large numbers of taxa.");
+    
+    xhr.send(JSON.stringify({"useMappedNames": false}));
+}
 
 function deleteTree(sourceId, treeId){
     var deleteTreeService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/deleteTreeFromTreeId";
     xhr = getXhr(deleteTreeService, function() {
-        var jsonrespstr = xhr.responseText;
-//      alert(jsonrespstr);
-        var evjson = eval(jsonrespstr);
-        window.location.href="source_view.html?sourceId=" + sourceId;
+        var response = JSON.parse(xhr.responseText);
+        if (response.event == "success") {
+            alert("Tree " + response.treeId + " has been deleted.");
+        }
+        window.location.href="source_view.py?sourceId=" + sourceId;
     });
     xhr.send(JSON.stringify({"sourceId": sourceId, "treeId": treeId}));
 }
@@ -450,6 +479,8 @@ $(document).ready(function() {
         sourceId = getSourceIdForTreeId(treeId);
     }
 
+    setupPage(sourceId, treeId);
+
     var rootNodeId;
     if (treeId != "undefined") {
         rootNodeId = getRootIdFromTreeId(treeId);
@@ -464,9 +495,7 @@ $(document).ready(function() {
     // fill the tree selector dropdowns even if there is no tree loaded 
     getSourceTreeList(sourceId, treeId);
     getAllLocalTreeList(treeId);
-    
-    setupPage(sourceId, treeId);
-    
+        
 });
 
 // when the tree svg loads, get its position for future reference

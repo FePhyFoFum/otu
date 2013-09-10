@@ -170,7 +170,7 @@ public class treeJsons extends ServerPlugin{
 	
 	@Description ("Hit the TNRS for all the names in a subtree. Return the results.")
 	@PluginTarget( Node.class )
-	public Representation doTNRSForDescendantsOf(@Source Node root,
+	public Representation doTNRSForDescendants(@Source Node root,
 		@Description ("The url of the TNRS service to use. If not supplied then the public OT TNRS will be used.")
 			@Parameter (name="TNRS Service URL", optional=true) String tnrsURL,
 		@Description ("NOT IMPLEMENTED. If it were, this would just say: If set to false (default), only the original otu labels will be used for TNRS. If set to true, currently mapped names will be used (if they exist).")
