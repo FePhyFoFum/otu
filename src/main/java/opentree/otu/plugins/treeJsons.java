@@ -132,9 +132,6 @@ public class treeJsons extends ServerPlugin{
 		
 		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
 		Node root = browser.getTreeRootNode(treeId, browser.LOCAL_LOCATION);
-
-
-		Node root = browser.getTreeRootNode(treeId, browser.LOCAL_LOCATION);
 		return OpentreeRepresentationConverter.convert(browser.getMetadataForTree(root));
 	}
 	
