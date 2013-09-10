@@ -1,18 +1,11 @@
 package opentree.otu.plugins;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
@@ -26,14 +19,11 @@ import opentree.otu.constants.RelType;
 import opentree.otu.exceptions.NoSuchTreeException;
 
 import org.json.simple.JSONObject;
-import org.json.simple.parser.ContainerFactory;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.server.plugins.*;
-import org.neo4j.server.rest.repr.JSONToRepresentationConverter;
 import org.neo4j.server.rest.repr.OpentreeRepresentationConverter;
 import org.neo4j.server.rest.repr.Representation;
 
@@ -173,7 +163,8 @@ public class treeJsons extends ServerPlugin{
 	public Representation doTNRSForDescendants(@Source Node root,
 		@Description ("The url of the TNRS service to use. If not supplied then the public OT TNRS will be used.")
 			@Parameter (name="TNRS Service URL", optional=true) String tnrsURL,
-		@Description ("NOT IMPLEMENTED. If it were, this would just say: If set to false (default), only the original otu labels will be used for TNRS. If set to true, currently mapped names will be used (if they exist).")
+		@Description ("NOT IMPLEMENTED. If it were, this would just say: If set to false (default), only the original " +
+				"otu labels will be used for TNRS. If set to true, currently mapped names will be used (if they exist).")
 			@Parameter(name="useMappedNames", optional=true) boolean useMappedNames) throws IOException, ParseException {
 		
 		LinkedList<Long> ids = new LinkedList<Long>();
@@ -209,10 +200,14 @@ public class treeJsons extends ServerPlugin{
         		.type(MediaType.APPLICATION_JSON_TYPE).post(String.class, new JSONObject(query).toJSONString());
 
 		// save the result to a local file
-        String savedResultsFilePath = "tnrs." + root.getId() + ".json";
+        
+        // TODO: the tnrs files get saved into the neo4j directory root. it would be better to save them in the
+        // otu directory, but to do that we will have to do some some finagling...
+        String savedResultsFilePath = "tnrs." + root.getId() + "." + System.currentTimeMillis() + ".json";
+        File resultsFile = new File(savedResultsFilePath);
         BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter( new FileWriter( savedResultsFilePath));
+            writer = new BufferedWriter( new FileWriter(resultsFile));
             writer.write(respJSON);
         } finally {
         	if ( writer != null) {
@@ -220,10 +215,11 @@ public class treeJsons extends ServerPlugin{
         	}
         }
         
-        // return some JSON with the file location so python can grab the file
+        // return some JSON with the information for to use when reloading the page
         Map<String, Object> results = new HashMap<String, Object>();
         results.put("event", "success");
-        results.put("results_file", savedResultsFilePath);
+        results.put("treeId", DatabaseUtils.getRootOfTreeContaining(root).getProperty(NodeProperty.TREE_ID.name));
+        results.put("results_file", resultsFile.getAbsolutePath());
 		
         return(OpentreeRepresentationConverter.convert(results));
 	}

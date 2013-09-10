@@ -391,11 +391,11 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(RelType.CHILDOF, Direction.INCOMING);
 		JadeNode root = new JadeNode();
 		HashMap<Node, JadeNode> traveledNodes = new HashMap<Node, JadeNode>();
-		int maxtips = maxNodes;
+//		int maxtips = maxNodes;
 		HashSet<Node> includednodes = new HashSet<Node>();
 		HashSet<Node> parents = new HashSet<Node>();
 		for (Node curGraphNode : CHILDOF_TRAVERSAL.breadthFirst().traverse(inRoot).nodes()) {
-			if (includednodes.size() > maxtips && parents.size() > 1) {
+			if (includednodes.size() > maxNodes && parents.size() > 1) {
 				break;
 			}
 			JadeNode curNode = null;

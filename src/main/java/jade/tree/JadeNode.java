@@ -191,14 +191,16 @@ public class JadeNode {
 		return ret.toString();
 	}
 	
+	private int ntips = 0;
+	
 	/**
-	 * Get JSON output NOT FOR THE ARGUS viewer. DEPRECATED for ARGUS. Use the ArgusRepresentationConverter instead.
+	 * Get JSON output for OTU. Should be converted to representation at some point...
 	 * 
 	 * 
 	 * @param bl should be true to include branch lengths
 	 * @return string with JSON representation of the subtree rooted at this node
 	 */
-	public String getJSON(boolean bl) { 		
+	public String getJSON(boolean bl) {
 		StringBuffer ret = new StringBuffer("{");
 		if (this.name != null) {
 			ret.append(" \"name\": \"" + this.getName() + "\"");
