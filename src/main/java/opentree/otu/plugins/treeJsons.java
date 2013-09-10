@@ -216,6 +216,7 @@ public class treeJsons extends ServerPlugin{
 		Map<String, Object> query = new HashMap<String, Object>();
 		query.put("names", names);
 		query.put("idInts", ids);
+		query.put("includeDubious", "true");
 		
 		// =====
 		
