@@ -110,12 +110,12 @@ public enum NodeProperty {
 	 * only be set on nodes that are actually part of the ingroup, implying that nodes without this property in trees that
 	 * have their ingroup set are thus part of the outgroup.
 	 */
-	IS_WITHIN_INGROUP("within_ingroup", boolean.class),
+	IS_WITHIN_INGROUP ("within_ingroup", boolean.class),
 	
 	/**
 	 * Whether or not this tree contains otu nodes that have been mapped to OTT taxa. Used for user feedback during TNRS.
 	 */
-	CONTAINS_TAXON_MAPPINGS ("contains_taxon_mappings", boolean.class),
+	PROCESSED_BY_TNRS ("processed_by_tnrs", boolean.class),
 	
 	/**
 	 * The name of the taxomachine context that has been determined for this tree.
