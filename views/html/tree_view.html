@@ -215,7 +215,7 @@ function setupTree(nodeId) {
             
         });
             
-    });
+    }, true);
     xhr.send(JSON.stringify({"nodeId":nodeId}));
 
 }
@@ -534,7 +534,7 @@ function doTNRS() {
         var response = JSON.parse(xhr.responseText);
         if (response.event == "success") {
 
-        $("#resultsSummary").append("TNRS: matched " + response.matched_name_ids.length + " out of " +
+        $("#resultsSummary").html("TNRS: matched " + response.matched_name_ids.length + " out of " +
             (response.unmatched_name_ids.length + response.matched_name_ids.length) +
             " names, including " + response.unambiguous_name_ids.length +
             " exact, non-homonym matches. The taxonomic context is <strong>" + response.context + "</strong>.");            

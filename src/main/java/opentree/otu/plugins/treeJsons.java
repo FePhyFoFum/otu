@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
@@ -26,6 +27,7 @@ import org.json.simple.parser.ParseException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.server.plugins.*;
 import org.neo4j.server.rest.repr.OpentreeRepresentationConverter;
@@ -212,7 +214,7 @@ public class treeJsons extends ServerPlugin{
         Transaction tx = graphDb.beginTx();
         
         root.setProperty(NodeProperty.CONTEXT_NAME.name, response.get("context"));
-        root.setProperty(NodeProperty.CONTAINS_TAXON_MAPPINGS.name, true);
+        root.setProperty(NodeProperty.PROCESSED_BY_TNRS.name, true);
         
         try {
 	        // walk the results
@@ -221,7 +223,14 @@ public class treeJsons extends ServerPlugin{
 	        	JSONArray matches = (JSONArray) ((JSONObject) nameResult).get("matches");
 	        	Node otuNode = graphDb.getNodeById((Long) ((JSONObject) nameResult).get("id"));
 	        	
-	            // if there is an exact match, update the node properties to reflect this
+	        	// remove previous TNRS result nodes
+	        	for (Relationship tnrsRel : otuNode.getRelationships(RelType.TNRSMATCHFOR)) {
+	        		Node tnrsNode = tnrsRel.getStartNode();
+	        		tnrsRel.delete();
+	        		tnrsNode.delete();
+	        	}
+	        	
+	            // if there is an exact match, store the match info in the graph node
 	        	if (matches.size() == 1) {
 	        		JSONObject match = ((JSONObject) matches.get(0));
 	        		if ((Double) match.get("score") == 1.0) {
@@ -235,7 +244,16 @@ public class treeJsons extends ServerPlugin{
 	        			JSONObject match = (JSONObject) m;
 	        			Node tnrsNode = graphDb.createNode();
 	        			for (Object property : match.keySet()) {
-	        				tnrsNode.setProperty((String) property, match.get(property));
+	        				Object value = match.get(property);
+	        				if (property.equals("flags")) {
+	        					String[] flags = new String[((JSONArray) value).size()];
+	        					int i = 0;
+	        					for (Object flag : (JSONArray) value) {
+	        						flags[i++] = (String) flag;
+	        					}
+	        				} else {
+	        					tnrsNode.setProperty((String) property, value);
+	        				}
 	        			}
 	        			tnrsNode.createRelationshipTo(otuNode, RelType.TNRSMATCHFOR);
 	        		}
