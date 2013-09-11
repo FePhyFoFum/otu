@@ -193,13 +193,13 @@ public class JadeNode {
 	
 	private int ntips = 0;
 	
-	/**
+	/*
 	 * Get JSON output for OTU. Should be converted to representation at some point...
 	 * 
 	 * 
 	 * @param bl should be true to include branch lengths
 	 * @return string with JSON representation of the subtree rooted at this node
-	 */
+	 *
 	public String getJSON(boolean bl) {
 		StringBuffer ret = new StringBuffer("{");
 		if (this.name != null) {
@@ -253,7 +253,7 @@ public class JadeNode {
 		}
 		ret.append("}");
 		return ret.toString();
-	}
+	} */
 
 	/**
 	 * @return Returns all of the tips in the subtree rooted at `this`

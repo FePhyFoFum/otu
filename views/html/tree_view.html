@@ -28,20 +28,6 @@ body {
 
 }
         </style>
-        <script>
-
-/*
-
-// if python is provided with tnrs results, it will print them here, and they will
-// be available as a javascript object when the page is loaded by the browser
-var tnrsResults=$TNRS_RESULTS$;
-
-// also printed by python if available
-var treeId=$TREE_ID$;
-
-*/
-
-        </script>
     </head>
     <body>
 
@@ -198,55 +184,40 @@ function getAllLocalTreeList(treeId) {
 function setupTree(nodeId) {
     var treeJSONService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getTreeJson";
     var xhr = getXhr(treeJSONService, function() {
-        
-        var jsonrespstr = xhr.responseText;
-        var evjson = eval(jsonrespstr); // TODO: convert this to representation
-
-//        alert(JSON.stringify(evjson));
-        
         d3.json("", function(error, flare) {
-            root = JSON.parse(evjson);
+            root = JSON.parse(xhr.responseText);
             root.x0 = height / 2;
             root.y0 = 0;
-                                    
             update(root);
-
-//            alert(Object.keys(tnrsResultsById));
-            
-        });
-            
-    }, true);
-    xhr.send(JSON.stringify({"nodeId":nodeId}));
-
+            update(root);
+        });            
+    });
+    xhr.send(JSON.stringify({"nodeId": nodeId}));
 }
 
-var tnrsResultsById = {}; // the latest TNRS results
-var taxonMappings = {}; // changes to be sent to the db
+//var tnrsResultsById = {}; // the latest TNRS results
+//var taxonMappings = {}; // changes to be sent to the db
+//var processedByTNRS;
 
 // Create the tree from the JSON
 function update(source) {
 
-    // Compute the new tree layout.
-    var nodes = tree.nodes(root).reverse(),
-        links = tree.links(nodes);
+    // gather nodes and links.
+    var nodes = tree.nodes(root).reverse();
+    var links = tree.links(nodes);
  
+    // calculate height // has weird behavior, not consistent...
     var tips = 0;
-    nodes.forEach(function(d) {
-        if(!d.children){tips+=1;}
-//        nodesById[d.id] = d; // make a map of nodes by id...
-    });
-    
+    nodes.forEach(function(d) { d.children.length > 0 ? tips += 1 : tips += 0 });
     nheight = tips * 20;
-    //alert(nheight);
     tree.size([nheight, 1760]);
-
-    // Normalize for fixed-depth.
+    
+    // Normalize for fixed-depth. // doesn't seem to be working
 //  nodes.forEach(function(d) { d.y = d.depth * 180; });
     nodes.forEach(function(d) { d.y = d.depth * 50; });
 
-    // Update the nodes…
-    var node = svg.selectAll("g.node")
-        .data(nodes, function(d) { return d.id || (d.id = ++i); });
+    // Update the nodes… // magical code, no idea what is happening here
+    var node = svg.selectAll("g.node").data(nodes, function(d) { return d.id || (d.id = ++i); });
 
     // Enter any new nodes at the parent's previous position.
     var nodeEnter = node.enter().append("g")
@@ -280,11 +251,11 @@ function update(source) {
                 alert("behold! you wish to extract!!");
             } /* else if (ev.shiftKey) {
                 // can also use ev.ctrlKey, etc. try alert(Object.keys(ev)) to see more
-        	    alert("shiftclick");
+                alert("shiftclick");
             } */
         
         })
-        
+    
         // example of right click, currently same behavior here as normal click
         .on("contextmenu", function(d, index) {
             d3.event.preventDefault();
@@ -293,80 +264,51 @@ function update(source) {
                 updateNodeEditor(d);
             }
         });
+    
+    // just add elements on nodeEnter--we will set properties on nodeUpdate
+    nodeEnter.append("circle");
+    nodeEnter.append("rect");
+    nodeEnter.append("text");
 
-    nodeEnter.append("circle")
-        .attr("r", 1e-6)
-        .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
-
-    nodeEnter.append("rect")
-        .attr("height", 12)
-        .attr("width", function(d) { return d.name ? d.name.length * 6.5 : 0; })
-        .attr('x', 8)
-        .attr("y", -6)
-//        .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
-        .style("stroke-opacity", 0)
-        .style("fill-opacity", function(d) { return tnrsResultsById[d.id] ? 1 : 0; })
-
-        // fill color depends on name status
-        .style("fill", function(d) {
-            if (tnrsResultsById[d.id]) {
-                if ((tnrsResultsById[d.id]).length > 1 ) {
-                    return "f73";
-                } else if ((tnrsResultsById[d.id])[0].isHomonym) {
-                    return "#ca0";
-                } else {
-                    return "0ad";
-                }
-            } else {
-                return "black";
-            }
-        });
-
-    nodeEnter.append("text")
-        .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
-        .attr("dy", ".35em")
-        .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
-        .text(function(d) { return d.size ? d.name + " (" + d.size + ")": d.name;})
-        .style("font-size", "10px") 
-        .style("font-family", "Arial")
-//        .style("fill-opacity", 1)
-
-        // text color depends on name status
-        .style("fill", function(d) { return tnrsResultsById[d.id] ? "white" : "black" });
-/*            if (tnrsResultsById[d.id]) {
-                if ((tnrsResultsById[d.id]).length > 1 ) {
-                    return "#fff";
-                } else if ((tnrsResultsById[d.id])[0].isHomonym) {
-                    return "#fff";
-                } else {
-                    return "#000";
-                }
-            }
-        }); */
-
-    // Transition nodes to their new position.
+    // Transition nodes to their new position/appearance.
     var nodeUpdate = node.transition()
         .duration(duration)
         .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
 
     nodeUpdate.select("circle")
-
-        //.attr("r", 4.5)
-        .attr("r", function(d) { return d.ingroup ? 4 : 3;})
-//        .style("stroke",function(d) { return d.ingroup ? "grey" : "lightgrey"; })
-        .style("stroke", "grey")
-        .style("stroke-width", function(d) { return d.ingroup ? 2 : 1 ;})
+        .attr("r", 3)
+        .style("stroke", "black")
         .style("fill", function(d) {
-            var fill = d.ingroup ? "grey" : "white"; 
+            var fill = d.within_ingroup ? "black" : "white"; 
             fill = d.notcomplete ? "lightgreen" : fill;
             return fill;
         });
-//        .style("fill",function(d) {  ; })
-        //.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
-        ;
 
     nodeUpdate.select("text")
-        .style("fill-opacity", 1);
+        .attr("x", function(d) { return d.children.length > 0 ? -10 : 10; })
+        .attr("dy", ".35em")
+        .attr("text-anchor", function(d) { return d.children.length > 0 ? "end" : "start"; })
+        .text(function(d) { return d.size ? d.name + " (" + d.size + ")": d.name;})
+        .style("font-size", "10px") 
+        .style("font-family", "Arial")
+
+        // text depends on name status
+        .style("fill", function(d) { return d.processed_by_tnrs ?  "white" : "black" });
+
+    nodeUpdate.select("rect")
+        .attr('x', 8)
+        .attr("y", -6)
+        .attr("height", 12)
+        .attr("width", function(d) { return d.name ? d.name.length * 6.5 : 0; })
+        .style("stroke-opacity", 1)
+
+        // stroke depends on whether we see an ottol id
+        .style("stroke", function(d) { return d["ot:ottolid"] ? "blue" : "red"; })
+
+        // fill also depends on whether tnrs has been done
+        .style("fill-opacity", function(d) { return d.processed_by_tnrs ? 1 : 0; })
+        .style("fill", function(d) { return (d.processed_by_tnrs && d["ot:ottolid"]) ? "blue" : "red"; });
+
 
     // Transition exiting nodes to the parent's new position.
     var nodeExit = node.exit().transition()
@@ -385,11 +327,11 @@ function update(source) {
         .data(links, function(d) { return d.target.id; });
 
     // Enter any new links at the parent's previous position.
-    link.enter().insert("path", "g") // TODO: would be nice to color the strokes by ingroup/outgroup
+    link.enter().insert("path", "g")
         .attr("class", "link")
         .style("fill","none")
-        .style("stroke","#ccc")
-        .style("stroke-width",1.5)
+        .style("stroke","black")
+        .style("stroke-width", 1) // TODO: can we use d.target.id to look up the node to see if it is in the ingroup to make the stroke different?
         .attr("d", function(d) {
             var o = {x: source.x0, y: source.y0};
             return diagonal({source: o, target: o});
@@ -416,47 +358,6 @@ function update(source) {
     });
 }
 
-/*
-// draw the tnrs results on the tree
-function displayTNRSResults() {
-    
-    $("#resultsSummary").append("TNRS: matched " + tnrsResults.matched_name_ids.length + " out of " +
-        (tnrsResults.unmatched_name_ids.length + tnrsResults.matched_name_ids.length) +
-        " names, including " + tnrsResults.unambiguous_name_ids.length +
-        " exact, non-homonym matches. The taxonomic context is <strong>" + tnrsResults.context + "</strong>.");
-    
-    $(tnrsResults.results).each(function(i, nameResult) {
-        tnrsResultsById[nameResult.id] = nameResult.matches;
-    });
-    
-/*    $("#taxonMappingButtons").append($("<button>")
-        .attr("id","saveTaxonMappingsButton")
-        .addClass("btn btn-success btn-large")
-        .click(function() { saveTaxonMappings() })
-        .append("Save taxon mappings"));
-    
-/*    $(tnrsResults.results).each(function(i, nameResult) {
-        tnrsResultsById[nameResult.id] = nameResult.matches;
-        
-        taxonMappings[nameResult.id] = {};
-        var changes = taxonMappings[nameResult.id];
-        
-        changes.["ot:ottolId"]= i;
-    });
-
-    alert(JSON.stringify(taxonMappings));
-}
-
-/*
-function saveTaxonMappings() {
-
-    // this should already exist, and consist of info on taxon mappings to be sent to the db
-    taxonMappings;
-    
-    alert(JSON.stringify(taxonMappings));
-
-}  */
-
 // ===== node editor
 
 // open the node editor for the passed node (called by .click() method of nodes)
@@ -466,9 +367,14 @@ function updateNodeEditor(node) {
     $(nodeEditor).attr("id", "nodeEditor")
         .css("top",xo + node.x + 40)
         .css("left",yo + node.y - 30)
+
+
+    // TODO: instead use the getOTU properties service
     $(Object.keys(node)).each(function(i, key) {
         $(nodeEditor).append(key + " " + node[key] + "<br/>");
     });    
+
+
     $("body").append(nodeEditor);
 }
 
@@ -489,11 +395,9 @@ $(document).click(function(event) {
 // Get the node id of the root node for a tree
 function getRootIdFromTreeId(treeId) {
     var rootNodeService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getRootNodeIdForTreeId";
-    xhr = getXhr(rootNodeService);
+    var xhr = getXhr(rootNodeService);
     xhr.send(JSON.stringify({"treeId":treeId}));
-    var jsonrespstr = xhr.responseText;
-    var evjson = eval(jsonrespstr);
-    return evjson;
+    return JSON.parse(xhr.responseText);
 }
 
 // Get the source id for a tree id
@@ -506,17 +410,15 @@ function getSourceIdForTreeId(treeId) {
     var sourceIdService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getSourceIdForTreeId";
     var xhr = getXhr(sourceIdService);
     xhr.send(JSON.stringify({"treeId":treeId}));
-    var jsonrespstr = xhr.responseText;
-    var evjson = eval(jsonrespstr);
-    return evjson;
+    return JSON.parse(xhr.responseText);
 }
 
 // ===== functions bound to buttons (server calls)
 
 function doTNRS() {
 
-    // need to adjust this check to work with whatever we do to store tnrs results... just check the tree properties?
-    if (Object.keys(tnrsResultsById).length > 0) {
+    // need to adjust this check to work with new tnrs storage
+    if (/*Object.keys(tnrsResultsById).length > 0*/ false) {
 
         // TODO: would be better to have "cancel" option set as default...
         var proceed = confirm("TNRS results already exist for this tree. Re-submitting the TNRS request will overwrite the existing results with new ones. Are you sure you want to do this?");
@@ -530,7 +432,7 @@ function doTNRS() {
     }
 
     var tnrsService = "http://localhost:7474/db/data/ext/treeJsons/node/" + getRootIdFromTreeId(treeId) + "/doTNRSForDescendants";
-    xhr = getXhr(tnrsService, function() {
+    var xhr = getXhr(tnrsService, function() {
         var response = JSON.parse(xhr.responseText);
         if (response.event == "success") {
 
@@ -539,36 +441,13 @@ function doTNRS() {
             " names, including " + response.unambiguous_name_ids.length +
             " exact, non-homonym matches. The taxonomic context is <strong>" + response.context + "</strong>.");            
  
-        // TODO: should fix so we don't have to set up twice
-        setupTree(response.rootNodeId);
-        setupTree(response.rootNodeId);
-        
-/*            // add a form to the page, and fill it in with information about the tnrs results, which
-            // are saved in a file on the hard drive.  python will receive this info on page reload
-            // and will print the contents of that file into a javascript variable called tnrsResults.
-           
-            var tnrsForm = $(document.createElement("form"))
-                .addClass("hidden")
-                .attr("name", "tnrsForm")
-                .attr("action", "tree_view.py")
-                .attr("method", "POST")
-                .append($("<input>")
-                    .addClass("hidden")
-                    .attr("name", "tnrs_results_path")
-                    .attr("type", "hidden")
-                    .attr("value", response.results_file))
-                .append($("<input>")
-                    .addClass("hidden")
-                    .attr("name", "treeId")
-                    .attr("type", "hidden")
-                    .attr("value", treeId));
-            
-            tnrsForm.submit(); */
+            // TODO: should fix so we don't have to set up twice
+            setupTree(response.rootNodeId);
         
         } else {
             alert(response.message);
         }
-    }, true);
+    });
     
     alert("Your request for taxonomic name resolution has been submitted. This page will reload when the request is "
         + "complete.\n\nThis could take some time if the tree contains a large number of taxa.");
@@ -591,9 +470,9 @@ function deleteTree(sourceId, treeId){
 function designateIngroup(nodeId){
 	var ingroupService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/ingroupSelect";
     xhr = getXhr(ingroupService, function() {
-        var jsonrespstr = xhr.responseText;
-        var evjson = eval(jsonrespstr);
-        setupTree(evjson);
+//        var jsonrespstr = xhr.responseText;
+//        var evjson = eval(jsonrespstr);
+        setupTree(xhr.responseText);
 	});
 	xhr.send(JSON.stringify({"nodeId": nodeId}));
 }
@@ -601,9 +480,9 @@ function designateIngroup(nodeId){
 function reroot(nodeId){
     var rerootService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/rerootTree";
     xhr = getXhr(rerootService, function() {
-        var jsonrespstr = xhr.responseText;
-        var evjson = eval(jsonrespstr);
-        setupTree(evjson);
+//        var jsonrespstr = xhr.responseText;
+//        var evjson = eval(jsonrespstr);
+        setupTree(JSON.parse(xhr.responseText));
     });
     xhr.send(JSON.stringify({"nodeId": nodeId}));
 }

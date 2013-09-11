@@ -276,12 +276,12 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		Map<String, Object> metadata = new HashMap<String, Object>();
 
 		// TODO: we may want to make this consistent with the  protected source property behavior tree root and source meta nodes
-		for (NodeProperty property : OTUConstants.VISIBLE_OTU_PROPERTIES) {
-			Object value = (Object) "";
+		for (NodeProperty property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
 			if (otu.hasProperty(property.name)) {
-				value = otu.getProperty(property.name);
+//			Object value = (Object) "";
+//				value = otu.getProperty(property.name);
+				metadata.put(property.name, otu.getProperty(property.name));
 			}
-			metadata.put(property.name, value);
 		}
 		
 		Map<String, Object> result = new HashMap<String, Object>();
@@ -406,12 +406,17 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 			}
 			traveledNodes.put(curGraphNode, curNode);
 			
+			// TODO: fix this so it uses the specific taxon name properties
 			if (curGraphNode.hasProperty(NodeProperty.NAME.name)) {
-				curNode.setName(GeneralUtils.cleanName(String.valueOf(curGraphNode.getProperty(NodeProperty.NAME.name))));
+				curNode.setName((String) curGraphNode.getProperty(NodeProperty.NAME.name));
+				//				curNode.setName(GeneralUtils.cleanName(String.valueOf(curGraphNode.getProperty(NodeProperty.NAME.name))));
 				// curNode.setName(GeneralUtils.cleanName(curNode.getName()));
 			}
 
-			if (curGraphNode.hasProperty(NodeProperty.OT_OTT_ID.name)) {
+			curNode.assocObject("nodeId", curGraphNode.getId());
+
+			// include tnrs information if we need to
+			if (!curGraphNode.hasProperty(NodeProperty.OT_OTT_ID.name)) {
 
 				Iterable<Relationship> tnrsHitRels = curGraphNode.getRelationships(RelType.TNRSMATCHFOR);
 				List<Object> tnrsHits = new LinkedList<Object>();
@@ -430,12 +435,16 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 				}
 			}
 
-			if (curGraphNode.hasProperty(NodeProperty.IS_WITHIN_INGROUP.name)) {
-				curNode.assocObject("ingroup", true);
+			// add properties suitable for the JSON
+			for (NodeProperty property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
+				if (curGraphNode.hasProperty(property.name)) {
+					curNode.assocObject(property.name, curGraphNode.getProperty(property.name));
+				}
 			}
-			curNode.assocObject("nodeId", String.valueOf(curGraphNode.getId()));
+
 			JadeNode parentJadeNode = null;
 			Relationship incomingRel = null;
+
 			if (curGraphNode.hasRelationship(Direction.OUTGOING, RelType.CHILDOF) && curGraphNode != inRoot) {
 				Node parentGraphNode = curGraphNode.getSingleRelationship(RelType.CHILDOF, Direction.OUTGOING).getEndNode();
 				if (includednodes.contains(parentGraphNode)) {
@@ -447,12 +456,13 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 					incomingRel = curGraphNode.getSingleRelationship(RelType.CHILDOF, Direction.OUTGOING);
 				}
 			}
-			includednodes.add(curGraphNode);
-			// add the current node to the tree we're building
 
+			// add the current node to the tree we're building
+			includednodes.add(curGraphNode);
 			if (parentJadeNode != null) {
 				parentJadeNode.addChild(curNode);
 			}
+			
 			// get the immediate synth children of the current node
 			LinkedList<Relationship> taxChildRels = new LinkedList<Relationship>();
 			int numchild = 0;
@@ -461,7 +471,8 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 				numchild += 1;
 			}
 			if (numchild > 0) {
-				// need to add a property of the jadenode if there are children, so if they aren't included, we can color it
+				// add a property of the jadenode if there are children, so if they aren't included in this jadetree
+				// because of tree size limits, we can color the node to indicate it has children
 				curNode.assocObject("haschild", true);
 				curNode.assocObject("numchild", numchild);
 			}
@@ -478,7 +489,7 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 				if (curGraphNode.hasProperty(NodeProperty.NAME.name)) {
 					temproot.setName(GeneralUtils.cleanName(String.valueOf(curGraphNode.getProperty(NodeProperty.NAME.name))));
 				}
-				temproot.assocObject("nodeId", String.valueOf(curGraphNode.getId()));
+				temproot.assocObject("nodeId", curGraphNode.getId());
 				temproot.addChild(newroot);
 				curRoot = curGraphNode;
 				newroot = temproot;

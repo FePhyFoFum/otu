@@ -1,3 +1,4 @@
+*.pyc
 .classpath
 .settings*
 target*

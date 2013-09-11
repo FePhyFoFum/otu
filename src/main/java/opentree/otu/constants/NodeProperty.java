@@ -6,6 +6,8 @@ package opentree.otu.constants;
  * 
  * https://github.com/OpenTreeOfLife/treemachine/wiki/Vocabulary
  * 
+ * http://opentree.wikispaces.com/NexSON // TODO: bring in the rest of the terms from this document
+ * 
  */
 public enum NodeProperty {
 

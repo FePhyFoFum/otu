@@ -1,6 +1,8 @@
 package org.neo4j.server.rest.repr;
 
 import jade.IterableArray;
+import jade.tree.JadeNode;
+import jade.tree.JadeTree;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -75,15 +77,14 @@ public class OpentreeRepresentationConverter {
         final FirstItemIterable<Representation> results = convertValuesToRepresentations(data);
         return new ListRepresentation(getType(results), results);
     }
-
+    
     ///////////////////////////////////////////////////////////////////////////////////////////////
     //
     //  internal conversion methods below here
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////
     
-    static Representation getIteratorRepresentation(Iterator data)
-    {
+    static Representation getIteratorRepresentation(Iterator data) {
         final FirstItemIterable<Representation> results = new FirstItemIterable<Representation>(
                 new IteratorWrapper<Representation, Object>(data) {
                     @Override
@@ -101,11 +102,10 @@ public class OpentreeRepresentationConverter {
         return new ListRepresentation(getType(results), results);
     }
 
-    static FirstItemIterable<Representation> convertValuesToRepresentations(Iterable data)
-    {
+    static FirstItemIterable<Representation> convertValuesToRepresentations(Iterable data) {
 
         return new FirstItemIterable<Representation> (
-                new IterableWrapper<Representation, Object>(data) {
+        		new IterableWrapper<Representation, Object>(data) {
 
                     @Override
                     protected Representation underlyingObjectToObject(Object value) {
@@ -136,7 +136,6 @@ public class OpentreeRepresentationConverter {
         return representation.getRepresentationType();
     }
 
-    
     /**
      * Return a Representation object that represents `data`. Representation objects are required by the RepresentationConverter serialization methods, so all objects to
      * be serialized (including primitives) must be converted to a Representation; this method provides that functionality.
@@ -148,6 +147,12 @@ public class OpentreeRepresentationConverter {
         if (data == null) {
             return ValueRepresentation.string("null");        
         
+        } else if (data instanceof JadeTree) {
+        	return JadeNodeRepresentation.getJadeNodeRepresentation(((JadeTree)data).getRoot());
+            
+        } else if (data instanceof JadeNode) {
+        	return JadeNodeRepresentation.getJadeNodeRepresentation((JadeNode) data);
+            
         } else if (data instanceof Double || data instanceof Float) {
             return ValueRepresentation.number(((Number) data).doubleValue());
         

@@ -4,8 +4,9 @@ package jade.tree;
  * Like TreeObject this class is just a (String, Object) pair. 
  * @todo Could use the same class for this as TreeObject (or could refactor the assoc elements of JadeNode and JadeTree)
  */
+@Deprecated
 public class NodeObject {
-	private String name;
+/*	private String name;
 	private Object obj;
 	
 	public NodeObject(String name, Object obj){
@@ -16,5 +17,5 @@ public class NodeObject {
 	public Object getObject(){return this.obj;}
 	public String getName(){return this.name;}
 	public void setObject(Object obj){this.obj = obj;}
-	public void setName(String name){this.name = name;}
+	public void setName(String name){this.name = name;} */
 }

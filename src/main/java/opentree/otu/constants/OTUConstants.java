@@ -34,10 +34,18 @@ public enum OTUConstants {
 		NodeProperty.LOCATION
 	};
 	
-	public static final NodeProperty[] VISIBLE_OTU_PROPERTIES = {
-		NodeProperty.NAME,
+/*	public static final NodeProperty[] VISIBLE_OTU_PROPERTIES = {
 		NodeProperty.IS_WITHIN_INGROUP,
 		NodeProperty.OT_ORIGINAL_LABEL
+	}; */
+	
+	public static final NodeProperty[] VISIBLE_JSON_TREE_PROPERTIES = {
+		NodeProperty.NAME, // TODO: need to change to use the correct taxon names
+		NodeProperty.IS_WITHIN_INGROUP,
+		NodeProperty.PROCESSED_BY_TNRS,
+		NodeProperty.OT_ORIGINAL_LABEL,
+		NodeProperty.OT_OTT_ID,
+		NodeProperty.OT_OTT_TAXON_NAME,
 	};
 	
 	public static final SearchableProperty[] TREE_PROPERTIES_FOR_SIMPLE_INDEXING = {

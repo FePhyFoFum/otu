@@ -438,6 +438,14 @@ public class DatabaseManager extends DatabaseAbstractBase {
 			// update indexes
 			indexer.removeTreeRootNodeFromIndexes(oldRoot);
 			indexer.addTreeRootNodeToIndexes(actualRoot);
+			
+			// reset the ingroup
+			actualRoot.setProperty(NodeProperty.INGROUP_IS_SET.name, false);
+			actualRoot.removeProperty(NodeProperty.INGROUP_START_NODE_ID.name);
+			for (Node child : Traversal.description().relationships(RelType.CHILDOF, Direction.INCOMING).traverse(actualRoot).nodes()) {
+				child.removeProperty(NodeProperty.IS_WITHIN_INGROUP.name);
+				child.removeProperty(NodeProperty.IS_INGROUP_ROOT.name);
+			}
 
 			tx.success();
 		} finally {

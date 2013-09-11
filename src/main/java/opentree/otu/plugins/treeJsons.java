@@ -29,6 +29,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.Traversal;
 import org.neo4j.server.plugins.*;
 import org.neo4j.server.rest.repr.OpentreeRepresentationConverter;
 import org.neo4j.server.rest.repr.Representation;
@@ -118,16 +119,17 @@ public class treeJsons extends ServerPlugin{
 	 */
 	@Description( "Return a string containing a JSON string for the subtree below the indicated tree node" )
 	@PluginTarget( GraphDatabaseService.class )
-	public String getTreeJson(@Source GraphDatabaseService graphDb,
+	public Representation getTreeJson(@Source GraphDatabaseService graphDb,
 			@Description( "The Neo4j node id of the node to be used as the root for the tree (can be used to extract subtrees as well).")
 			@Parameter(name = "nodeId", optional = false) Long nodeId) {
 //		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
 
 		// TODO: add check for whether tree is imported. If not then return error instead of just empty tree
 		Node rootNode = graphDb.getNodeById(nodeId);
-		JadeTree t = DatabaseBrowser.getTreeFromNode(rootNode, 300);
+		JadeTree jadeTree = DatabaseBrowser.getTreeFromNode(rootNode, 300);
 
-		return t.getRoot().getJSON(false);
+		return OpentreeRepresentationConverter.convert(jadeTree);
+//		return t.getRoot().getJSON(false);
 	}
 	
 	@Description( "Get tree metadata" )
@@ -173,18 +175,27 @@ public class treeJsons extends ServerPlugin{
 		@Description ("NOT IMPLEMENTED. If it were, this would just say: If set to false (default), only the original " +
 				"otu labels will be used for TNRS. If set to true, currently mapped names will be used (if they exist).")
 			@Parameter(name="useMappedNames", optional=true) boolean useMappedNames) throws IOException, ParseException {
+
+		// start a transaction for edits
+        GraphDatabaseAgent graphDb = new GraphDatabaseAgent(root.getGraphDatabase()) ;
+        Transaction tx = graphDb.beginTx();
 		
+		// get ids and names and names to send to tnrs
 		LinkedList<Long> nodeIds = new LinkedList<Long>();
 		LinkedList<String> names = new LinkedList<String>();
-		
-		// make a map of these with ids and original names
-		for (Node otu : DatabaseUtils.DESCENDANT_OTU_TRAVERSAL.traverse(root).nodes()) {
-			
+//		for (Node otu : DatabaseUtils.DESCENDANT_OTU_TRAVERSAL.traverse(root).nodes()) {
+		for (Node child : Traversal.description().relationships(RelType.CHILDOF, Direction.INCOMING).traverse(root).nodes()) {
 			// TODO: allow the choice to use mapped or original names... currently that leads to nullpointerexceptions
 
-			if (otu.hasProperty(NodeProperty.NAME.name)) {
-				nodeIds.add(otu.getId());
-				names.add((String) otu.getProperty(NodeProperty.NAME.name));
+			// record that we have TNRS'd this node (i.e. this clade on the tree)
+			child.setProperty(NodeProperty.PROCESSED_BY_TNRS.name, true);
+			
+			// for tip nodes, record names to hit against tnrs
+			if (!child.hasRelationship(RelType.CHILDOF, Direction.INCOMING)) {
+				if (child.hasProperty(NodeProperty.NAME.name)) {
+					nodeIds.add(child.getId());
+					names.add((String) child.getProperty(NodeProperty.NAME.name));
+				}
 			}
 		}
 		
@@ -208,10 +219,6 @@ public class treeJsons extends ServerPlugin{
         
         JSONParser parser = new JSONParser();
         JSONObject response = (JSONObject) parser.parse(respJSON);
-
-        GraphDatabaseAgent graphDb = new GraphDatabaseAgent(root.getGraphDatabase()) ;
-        
-        Transaction tx = graphDb.beginTx();
         
         root.setProperty(NodeProperty.CONTEXT_NAME.name, response.get("context"));
         root.setProperty(NodeProperty.PROCESSED_BY_TNRS.name, true);

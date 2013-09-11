@@ -15,6 +15,14 @@ public class IterableArray implements Iterable {
 		this.array = array;
 	}
 
+	public IterableArray(Object array) {
+		if (array.getClass().isArray()) {
+			this.array = (Object[]) array;
+		} else {
+			throw new IllegalArgumentException("cannot convert from " + array.getClass().getName() + " to array");
+		}
+	}
+	
 	@Override
 	public Iterator iterator() {
 		return new ArrayIterator(array);
