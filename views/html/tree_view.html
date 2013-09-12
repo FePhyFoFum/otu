@@ -6,6 +6,7 @@
         $$HEAD_CONTENT$$
 
         <style>
+            
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
@@ -16,6 +17,9 @@ body {
     width: 22em;
     padding-right:0em;
 
+} #resultsSummary {
+    margin-top: 0.5em;
+
 } #nodeEditor {
     background-color: white;
 	position: absolute;
@@ -23,9 +27,28 @@ body {
 	padding: 0.2em 0.5em 0.3em 0.5em;
 	width: 20em;
 
-} #resultsSummary {
-    margin-top: 0.5em;
+} #nodeEditor .originalLabel {
+    font-size: 0.9em;
 
+} #nodeEditor form {
+    background: #dedede;
+    padding: 0.3em;
+    margin: 0 0 0.3em 0;
+//    border: 1px solid red;
+
+} #nodeEditor form input {
+    margin: 0 0.3em 0 0;
+    height: 2em;
+    
+} #nodeEditor form button {
+    margin: 0;
+    
+} #assignTagForm {
+    height: 2em;
+    
+} #assignTagForm input {
+    width: 6.55em;
+    
 }
         </style>
     </head>
@@ -179,7 +202,12 @@ function getAllLocalTreeList(treeId) {
     xhr.send(treeId ? JSON.stringify({"excludedTreeIds":[treeId]}) : "");
 }
 
-// ===== tree view and editing
+///////////////////////////////////////
+//
+//
+//      tree drawing and editing
+//
+//
 
 function setupTree(nodeId) {
     var treeJSONService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getTreeJson";
@@ -209,7 +237,7 @@ function update(source) {
     // calculate height // has weird behavior, not consistent...
     var tips = 0;
     nodes.forEach(function(d) { d.children.length > 0 ? tips += 1 : tips += 0 });
-    nheight = tips * 20;
+    nheight = tips * 35;
     tree.size([nheight, 1760]);
     
     // Normalize for fixed-depth. // doesn't seem to be working
@@ -284,22 +312,11 @@ function update(source) {
             return fill;
         });
 
-    nodeUpdate.select("text")
-        .attr("x", function(d) { return d.children.length > 0 ? -10 : 10; })
-        .attr("dy", ".35em")
-        .attr("text-anchor", function(d) { return d.children.length > 0 ? "end" : "start"; })
-        .text(function(d) { return d.size ? d.name + " (" + d.size + ")": d.name;})
-        .style("font-size", "10px") 
-        .style("font-family", "Arial")
-
-        // text depends on name status
-        .style("fill", function(d) { return d.processed_by_tnrs ?  "white" : "black" });
-
     nodeUpdate.select("rect")
-        .attr('x', 8)
-        .attr("y", -6)
-        .attr("height", 12)
-        .attr("width", function(d) { return d.name ? d.name.length * 6.5 : 0; })
+        .attr('x', 7)
+        .attr("y", -7)
+        .attr("height", 15)
+        .attr("width", function(d) { return d.name ? d.name.length * 9 : 0; })
         .style("stroke-opacity", 1)
 
         // stroke depends on whether we see an ottol id
@@ -308,7 +325,58 @@ function update(source) {
         // fill also depends on whether tnrs has been done
         .style("fill-opacity", function(d) { return d.processed_by_tnrs ? 1 : 0; })
         .style("fill", function(d) { return (d.processed_by_tnrs && d["ot:ottolid"]) ? "blue" : "red"; });
+        
+    nodeUpdate.select("text")
+        .attr("x", function(d) { return d.children.length > 0 ? -10 : 10; })
+        .attr("dy", ".35em")
+        .attr("text-anchor", function(d) { return d.children.length > 0 ? "end" : "start"; })
+        .text(function(d) { return d.size ? d.name + " (" + d.size + ")": d.name;})
+        .style("font-size", "13px") 
+        .style("font-family", "Arial")
 
+        // text depends on name status
+        .style("fill", function(d) { return d.processed_by_tnrs ?  "white" : "black" });
+
+
+    // also see about using the .insert() method to insert the rects before the text elements.
+    // just need to be able to find the text elements to get the bounding box... so, select the node,
+    // select the text element and get the bounding box, insert a rect before the text element based
+    /// on the bounding box
+
+
+
+
+/* close to getting something here to draw the boxes around text based on the text bounding box...
+
+//    nodeUpdate.select("rect")
+    // draw the text boxes
+    nodeUpdate[0].forEach( function(d) {
+
+        alert(Object.keys(d3.select(d).select("text")));//[0][0].getBBox();
+
+//        bbox = d3.select(d).select("text")[0][0].getBBox();
+        alert(JSON.stringify(bbox));
+        d3.select(d).append("rect")
+//        d.append("rect")
+            .attr("x", bbox.x)
+            .attr("y", bbox.y)
+            .attr("height", bbox.height)
+            .attr("width", bbox.width)
+//            .attr("width", function(d) { return d.name ? d.name.length * 6.5 : 0; })
+            .style("stroke-opacity", 1)
+
+            // stroke depends on whether we see an ottol id
+            .style("stroke", function(d) { return d["ot:ottolid"] ? "blue" : "red"; })
+
+            // fill also depends on whether tnrs has been done
+            .style("fill-opacity", function(d) { return d.processed_by_tnrs ? 1 : 0; })
+            .style("fill", function(d) { return (d.processed_by_tnrs && d["ot:ottolid"]) ? "blue" : "red"; });
+
+
+//        alert(d3.select(d).select("text").);
+//        d.append
+//        alert(d3.select(d));
+    }); */
 
     // Transition exiting nodes to the parent's new position.
     var nodeExit = node.exit().transition()
@@ -331,7 +399,7 @@ function update(source) {
         .attr("class", "link")
         .style("fill","none")
         .style("stroke","black")
-        .style("stroke-width", 1) // TODO: can we use d.target.id to look up the node to see if it is in the ingroup to make the stroke different?
+        .style("stroke-width", 1)
         .attr("d", function(d) {
             var o = {x: source.x0, y: source.y0};
             return diagonal({source: o, target: o});
@@ -351,6 +419,15 @@ function update(source) {
         })
         .remove();
 
+        
+//    var text = [];
+//    var text = ;
+//    for (var i = 0; i < text.length; i++) {
+//        alert(Object.keys(text[i]));
+//    }
+//      svg.selectAll("text")[0].forEach(function(d) { alert(Object.keys(d)) }); // { text.push(d.getBBox()) });
+//    alert(text);
+
     // Stash the old positions for transition.
     nodes.forEach(function(d) {
         d.x0 = d.x;
@@ -358,25 +435,157 @@ function update(source) {
     });
 }
 
-// ===== node editor
+///////////////////////////////////////
+//
+//
+//      node editor
+//
+//
+//
+
+var currentNode;
 
 // open the node editor for the passed node (called by .click() method of nodes)
 function updateNodeEditor(node) {
+
+    /*
+    // attempting to toggle node properties, currently not working
+    if (currentNode) {d3.select(currentNode).style("fill", node.within_ingroup ? "black" : "white");}
+    currentNode = node;
+    d3.select(currentNode).style("fill", "red");
+    */
+
     $('#nodeEditor').remove();
     var nodeEditor = document.createElement("div");
     $(nodeEditor).attr("id", "nodeEditor")
         .css("top",xo + node.x + 40)
-        .css("left",yo + node.y - 30)
+        .css("left",yo + node.y - 30);
 
+    // what follows is for otu nodes, could have a different case for internal nodes
 
-    // TODO: instead use the getOTU properties service
-    $(Object.keys(node)).each(function(i, key) {
-        $(nodeEditor).append(key + " " + node[key] + "<br/>");
-    });    
+    // name
+    var name = node["ot:ottTaxonName"] ? node["ot:ottTaxonName"] : node["name"]; // todo: switch this to original label? Need to wait until peter implements the ot:ottTaxonName
+    $(nodeEditor).append("<h4>"+name+"</h4>");
 
+    // original label
+    if (name != node["ot:originalLabel"]) {
+        $(nodeEditor).append('<p class="originalLabel">(originally: ' + node["ot:originalLabel"] + ')</p>');
+    }
+
+    // taxon assignment feedback
+    var assignmentMessage = false;
+    if (node["ot:ottolid"]) {
+        assignmentMessage = 'Assigned to OTT taxon <a href="#">' + node["ot:ottolid"] + '</a>';
+    }
+    
+    if (assignmentMessage) {
+        var tnrsMessage = node.processed_by_tnrs ? ", validated by TNRS." : ", not yet validated by TNRS.";
+        $(nodeEditor).append($("<p>")
+                .append(assignmentMessage)
+                .append(tnrsMessage));
+    }
+    
+    // alternative mappings
+    $(nodeEditor).append($("<div>")
+        .attr("id","alternativeMappings"));
+    displayAlternativeMappings(node); // use ajax to populate the container
+    
+    // assign different taxon form
+    $(nodeEditor).append($("<form>")
+        .attr("id", "assignTaxonForm")
+        .addClass(" inline-form")
+        .append("<p>Assign a different taxon to this node:</p>")
+        .append($("<input>")
+            .attr("type", "hidden")
+            .attr("name", "nodeId")
+            .val(node.nodeId))
+        .append($("<input>")
+            .attr("type", "hidden")
+            .attr("name", "ottId"))
+        .append($("<input>")
+            .attr("type", "text")
+            .attr("name", "ottTaxonName"))
+        .append($("<button>")
+            .attr("type", "button")
+            .append("Assign")
+            .click(function() { submitTaxonAssignment(); })
+        ));
+        
+    // assign tag form
+    $(nodeEditor).append($("<form>")
+        .attr("id", "assignTagForm")
+        .addClass(" inline-form")
+        .append($("<p>")
+            .append("Tag this node: ")
+            .append($("<input>")
+                .attr("type", "hidden")
+                .attr("name", "nodeId")
+                .val(node.nodeId))
+            .append($("<input>")
+                .attr("type", "hidden")
+                .attr("name", "ottId"))
+            .append($("<input>")
+                .attr("type", "text")
+                .attr("name", "ottTaxonName"))
+            .append($("<button>")
+                .attr("type", "button")
+                .append("Tag node")
+                .click(function() { submitTagAnnotation(); })
+            )));
+    
+    /*
+    // property editor form
+    $(nodeEditor).append($("<form>")
+        .attr("id", "propertyEditForm")
+        .addClass(" inline-form")
+        .append("<p>Enter a property name and value to be stored on this node</p>")
+        .append($("<input>")
+            .attr("type", "hidden")
+            .attr("name", "nodeId")
+            .val(node.nodeId))
+        .append("<span>key:</span>")
+        .append($("<input>")
+            .attr("type", "text")
+            .attr("name", "key"))
+        .append("<span>value:</span>")
+        .append($("<input>")
+            .attr("type", "text")
+            .attr("name", "value"))
+        .append($("<button>")
+            .attr("type", "button")
+            .append("Submit edit")
+            .click(function() { submitPropertyEdit(); })
+        ));
+    */
 
     $("body").append(nodeEditor);
 }
+
+function submitTagAnnotation() {
+    
+    alert(Object.keys($("#assignTagForm")));
+    
+}
+
+function submitTaxonAssignment() {
+    
+    alert(Object.keys($("#assignTaxonForm")));
+    
+}
+
+function displayAlternativeMappings(node) {
+    var altMappingsService = "http://localhost:7474/db/data/ext/treeJsons/node/" + node.id + "/getTNRSMappings";
+    alert(altMappingsService);
+    var xhr = getXhr(altMappingsService, function() {
+        
+        
+        // TODO: display form with mappings
+        
+        
+    }, true);
+    xhr.send();
+}
+
 
 // close the node editor (if open) if the user clicks anywhere else
 $(document).click(function(event) {
@@ -390,7 +599,14 @@ $(document).click(function(event) {
     }
 });
 
-// ===== server calls for general info
+
+///////////////////////////////////////
+//
+//
+//      server calls for general info
+//
+//
+//
 
 // Get the node id of the root node for a tree
 function getRootIdFromTreeId(treeId) {

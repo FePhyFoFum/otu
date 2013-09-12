@@ -157,14 +157,21 @@ public class treeJsons extends ServerPlugin{
 		return (String) sourceMeta.getProperty(NodeProperty.SOURCE_ID.name);
 	}
 	
-	@Description( "Get OTU metadata" )
-	@PluginTarget( Node.class )
+	@Description("Get OTU metadata. Currently not used because we get all this infor from the getTreeJSON service")
+	@PluginTarget(Node.class)
+	@Deprecated
 	public Representation getOTUMetaData(@Source Node node) {
 
-		// TODO: use this to fill out the node editor
-		
 		DatabaseBrowser browser = new DatabaseBrowser(node.getGraphDatabase());
 		return OpentreeRepresentationConverter.convert(browser.getMetadataForOTU(node));
+	}
+
+	@Description("Get alternative TNRS mappings for the specified node. Returns an empty map if none exist.")
+	@PluginTarget(Node.class)
+	public Representation getTNRSMappings(@Source Node node) {
+
+		DatabaseBrowser browser = new DatabaseBrowser(node.getGraphDatabase());
+		return OpentreeRepresentationConverter.convert(browser.getAlternativeMappingsForNode(node));
 	}
 	
 	@Description ("Hit the TNRS for all the names in a subtree. Return the results.")
@@ -246,6 +253,7 @@ public class treeJsons extends ServerPlugin{
 	        			otuNode.setProperty(NodeProperty.OT_OTT_TAXON_NAME.name,  match.get("matched_name"));
 	        		}
 	        	} else {
+	        		
 	        		// create TNRS result nodes holding each match's info
 	        		for (Object m : matches) {
 	        			JSONObject match = (JSONObject) m;

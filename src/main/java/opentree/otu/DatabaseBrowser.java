@@ -267,10 +267,12 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 	}
 	
 	/**
-	 * Return a map of relevant properties for the specified OTU node.
+	 * Return a map of relevant properties for the specified OTU node. Not used since the getTreeJSONs already provides all this
+	 * data. But could be reinstated later if we need different data than what getTreeJSON provides.
 	 * @param otu
 	 * @return
 	 */
+	@Deprecated
 	public Map<String, Object> getMetadataForOTU(Node otu) {
 		
 		Map<String, Object> metadata = new HashMap<String, Object>();
@@ -278,8 +280,6 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		// TODO: we may want to make this consistent with the  protected source property behavior tree root and source meta nodes
 		for (NodeProperty property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
 			if (otu.hasProperty(property.name)) {
-//			Object value = (Object) "";
-//				value = otu.getProperty(property.name);
 				metadata.put(property.name, otu.getProperty(property.name));
 			}
 		}
@@ -381,6 +381,33 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		return result;
 	}
 	
+	/**
+	 * Return information about the alternative mappings identified by TNRS for this node. Returns null if none exist.
+	 * @param otuNode
+	 * @return
+	 */
+	public static Map<String, Object> getAlternativeMappingsForNode(Node otuNode) {
+
+		Iterable<Relationship> tnrsRels = otuNode.getRelationships(RelType.TNRSMATCHFOR, Direction.INCOMING);
+		
+		if (!tnrsRels.iterator().hasNext()) {
+			return null;
+		}
+		
+		// return description of these nodes
+		Map<String, Object> matches = new HashMap<String, Object>();
+		
+		for (Relationship tnrsRel : tnrsRels) {
+			Node tnrsMatchNode = tnrsRel.getStartNode();
+			Map<String, Object> match = new HashMap<String, Object>();
+			for (String property : tnrsMatchNode.getPropertyKeys()) {
+				match.put(property, tnrsMatchNode.getProperty(property));				
+			}
+			matches.put((String) tnrsMatchNode.getProperty("matched_ott_id"), match);
+		}
+		
+		return matches;
+	}	
 	/**
 	 * Get the subtree of a given tree graph node. Does not perform error checks to make sure the tree exists.
 	 * @param inRoot
