@@ -4,6 +4,8 @@ import jade.tree.JadeNode;
 import jade.tree.JadeTree;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -393,8 +395,9 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 		if (!tnrsRels.iterator().hasNext()) {
 			return null;
 		}
-		
+				
 		// return description of these nodes
+		List< Map<String, Object>> scores = new ArrayList< Map<String, Object>>();
 		Map<String, Object> matches = new HashMap<String, Object>();
 		
 		for (Relationship tnrsRel : tnrsRels) {
@@ -404,10 +407,65 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 				match.put(property, tnrsMatchNode.getProperty(property));				
 			}
 			matches.put((String) tnrsMatchNode.getProperty("matched_ott_id"), match);
+			
+			Map<String, Object> score = new HashMap<String, Object>();
+			score.put("matched_ott_id", tnrsMatchNode.getProperty("matched_ott_id"));
+			score.put("score", tnrsMatchNode.getProperty("score"));
+			scores.add(score);
 		}
 		
-		return matches;
+		Collections.sort(scores, new MatchScoreComparator());
+		
+		List<String> sortedIds = new LinkedList<String>();
+		for (Map<String, Object> score : scores) {
+			sortedIds.add((String) score.get("matched_ott_id"));
+		}
+
+		Map<String, Object> results = new HashMap<String, Object>();
+		results.put("alternate_matches", matches);
+		results.put("ids_ordered_by_score", sortedIds);
+		return results;
 	}	
+
+	/**
+	 * A small custom comparator to facilitate sorting matches by score.
+	 * @author cody
+	 */
+	private static class MatchScoreComparator implements Comparator<Object> {
+		@Override
+		public int compare(Object match1, Object match2) {
+			Double score1 = (Double) ((Map<String, Object>) match1).get("score");
+			Double score2 = (Double) ((Map<String, Object>) match2).get("score");
+			if (score1 > score2) {
+				return -1; // reverse order, sort highest to lowest
+			} else if (score1 < score2) {
+				return 1; // reverse order	
+			} else {
+				return 0;
+			}
+		}
+	}
+
+	
+	/*
+	 * Just a class to facilitate sorting matches by score.
+	 * @author cody
+	 *
+	private static class MatchScoreComparator implements Comparator<Object> {
+		@Override
+		public int compare(Object match1, Object match2) {
+			Double score1 = (Double) ((Map<String, Object>) match1).get("score");
+			Double score2 = (Double) ((Map<String, Object>) match2).get("score");
+			if (score1 > score2) {
+				return 1;
+			} else if (score1 < score2) {
+				return -1;				
+			} else {
+				return 0;
+			}
+		}
+	} */
+	
 	/**
 	 * Get the subtree of a given tree graph node. Does not perform error checks to make sure the tree exists.
 	 * @param inRoot

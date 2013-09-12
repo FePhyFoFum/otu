@@ -487,7 +487,7 @@ function updateNodeEditor(node) {
     
     // alternative mappings
     $(nodeEditor).append($("<div>")
-        .attr("id","alternativeMappings"));
+        .attr("id","altMatchesContainer"));
     displayAlternativeMappings(node); // use ajax to populate the container
     
     // assign different taxon form
@@ -561,6 +561,62 @@ function updateNodeEditor(node) {
     $("body").append(nodeEditor);
 }
 
+function displayAlternativeMappings(node) {
+    var altMappingsService = "http://localhost:7474/db/data/ext/treeJsons/node/" + node.id + "/getTNRSMappings";
+//    alert(altMappingsService);
+    var xhr = getXhr(altMappingsService, function() {
+        
+        var response = JSON.parse(xhr.responseText);
+//        alert(JSON.stringify(response));
+
+        if (response.ids_ordered_by_score.length > 0) {
+        
+            $("#altMatchesContainer")
+                .append($("<form>")
+                    .attr("id", "altMatchesForm")
+                    .append("Assign a suggested match:<br/>"));
+            // TODO: display form with mappings
+
+            var ids = response.ids_ordered_by_score
+            var matches = response.alternate_matches;
+            var idNameMap = {};
+            for (var i=0; i < ids.length; i++) {
+        
+//                var id = ids[i];
+            
+//                alert(matches[ids[i]]);
+            
+                var id = matches[ids[i]].matched_ott_id;
+                var score = (matches[ids[i]].score * 100).toFixed(0);
+                var name = matches[ids[i]].matched_name;
+                var description = " (" + matches[ids[i]].nomenclature_code
+                    + ") score: " + score;
+
+                idNameMap[id] = name;
+                        
+                $("#altMatchesForm")
+                    .append($("<input>")
+                        .attr("type", "radio")
+                        .attr("name", "taxonId")
+                        .val(matches[ids[i]]))
+                    .append("<strong>" + name + "</strong> " + description)
+                    .append("<br/>");
+            }
+        
+            $("#altMatchesForm")
+                .append($("<input>")
+                    .attr("type", "hidden")
+                    .attr("name", "namesForIds")
+                    .val(JSON.stringify(idNameMap)))
+                .append($("<button>")
+                    .attr("type", "button")
+                    .append("Assign")
+                    .click(function() { submitAltMatchAssignment() }));
+        } 
+    });
+    xhr.send();
+}
+
 function submitTagAnnotation() {
     
     alert(Object.keys($("#assignTagForm")));
@@ -573,19 +629,11 @@ function submitTaxonAssignment() {
     
 }
 
-function displayAlternativeMappings(node) {
-    var altMappingsService = "http://localhost:7474/db/data/ext/treeJsons/node/" + node.id + "/getTNRSMappings";
-    alert(altMappingsService);
-    var xhr = getXhr(altMappingsService, function() {
-        
-        
-        // TODO: display form with mappings
-        
-        
-    }, true);
-    xhr.send();
+function submitAltMatchAssignment() {
+    
+    alert(Object.keys($("#altMappingsForm")));
+    
 }
-
 
 // close the node editor (if open) if the user clicks anywhere else
 $(document).click(function(event) {

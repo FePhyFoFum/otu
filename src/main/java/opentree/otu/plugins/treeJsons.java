@@ -166,12 +166,14 @@ public class treeJsons extends ServerPlugin{
 		return OpentreeRepresentationConverter.convert(browser.getMetadataForOTU(node));
 	}
 
-	@Description("Get alternative TNRS mappings for the specified node. Returns an empty map if none exist.")
+	@Description("Get alternative TNRS mappings for the specified node.")
 	@PluginTarget(Node.class)
 	public Representation getTNRSMappings(@Source Node node) {
 
 		DatabaseBrowser browser = new DatabaseBrowser(node.getGraphDatabase());
-		return OpentreeRepresentationConverter.convert(browser.getAlternativeMappingsForNode(node));
+		Map<String, Object> results = browser.getAlternativeMappingsForNode(node);
+		
+		return OpentreeRepresentationConverter.convert(results);
 	}
 	
 	@Description ("Hit the TNRS for all the names in a subtree. Return the results.")
@@ -243,6 +245,10 @@ public class treeJsons extends ServerPlugin{
 	        		tnrsRel.delete();
 	        		tnrsNode.delete();
 	        	}
+	        	
+	        	// remove previous taxon matching info
+	        	otuNode.removeProperty(NodeProperty.OT_OTT_ID.name);
+	        	otuNode.removeProperty(NodeProperty.OT_OTT_TAXON_NAME.name);
 	        	
 	            // if there is an exact match, store the match info in the graph node
 	        	if (matches.size() == 1) {

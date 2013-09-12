@@ -112,7 +112,18 @@ public class OpentreeRepresentationConverter {
 
                     	if (value instanceof Iterable) {
                             final FirstItemIterable<Representation> nested = convertValuesToRepresentations((Iterable) value);
-                            return new ListRepresentation(getType(nested), nested);
+                            RepresentationType rType = null;
+                            if (((Iterable) value).iterator().hasNext()) {
+                            	Object firstItem = ((Iterable) value).iterator().hasNext();
+        						if (firstItem instanceof Map) {
+        							rType = RepresentationType.MAP;
+        						} else {
+        							rType = getType(nested);
+        						}
+        					}
+                            
+//                            return new ListRepresentation(getType(nested), nested);
+                           return new ListRepresentation(rType, nested);
 
                     	} else {
                             return getSingleRepresentation(value);
