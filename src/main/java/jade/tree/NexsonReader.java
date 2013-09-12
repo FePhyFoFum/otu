@@ -92,7 +92,7 @@ public class NexsonReader {
 
 		NexsonSource source = new NexsonSource(sourceId);
 
-		JSONObject all = (JSONObject)JSONValue.parse(r);
+		JSONObject all = (JSONObject) JSONValue.parse(r);
 
 		/*
 		  The format of the file, roughly speaking (some noise omitted):
