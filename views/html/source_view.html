@@ -10,6 +10,7 @@ body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
 } .treeHeader * {
+    position: relative;
     margin-right: 0.22em;
 
 } #editSourceBtn, .editTreeBtn {
@@ -26,6 +27,11 @@ body {
     position: absolute;
     top: 0;
     right: 0;
+
+} .deleteTreeBtn {
+    position: absolute;
+    top: 0;
+    left: 25em;
 
 } #format {
     margin-top: 2em;
@@ -178,17 +184,23 @@ function displayTreeInfo(treeId) {
         // write the header for this tree
         var treeHeader = $(document.createElement("h3"))
             .addClass("treeHeader")
-            .append($(document.createElement("a"))
-                .attr("href","tree_view.py?treeId=" + treeId)
-                .append(treeId))
+//            .append($(document.createElement("a"))
+//                .attr("href","tree_view.py?treeId=" + treeId)
+//                .append(treeId))
             .append($(document.createElement("button"))
                 .attr("type","button")
                 .addClass("btn btn-large btn-success doNotHide editTreeBtn")
                 .click(function() { toggleTreeEditForm($("#"+formId)) })
                 .append("Edit Metadata"))
             .append($(document.createElement("button"))
+                .attr("type", "button")
+                .addClass("btn btn-large btn-warning doNotHide")
+                .click(function() { window.location.href="tree_view.py?treeId=" + treeId; })
+                .append("Edit Tree"))
+            .append()
+            .append($(document.createElement("button"))
                 .attr("type","button")
-                .addClass("btn btn-large btn-danger doNotHide")
+                .addClass("btn btn-large btn-danger doNotHide deleteTreeBtn")
                 .click(function() { deleteTree(treeId) })
                 .append("Delete Tree"));
         $(treeForm).append(treeHeader);
