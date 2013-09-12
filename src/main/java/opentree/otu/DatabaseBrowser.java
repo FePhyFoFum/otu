@@ -392,9 +392,9 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 
 		Iterable<Relationship> tnrsRels = otuNode.getRelationships(RelType.TNRSMATCHFOR, Direction.INCOMING);
 		
-		if (!tnrsRels.iterator().hasNext()) {
+/*		if (!tnrsRels.iterator().hasNext()) {
 			return null;
-		}
+		} */
 				
 		// return description of these nodes
 		List< Map<String, Object>> scores = new ArrayList< Map<String, Object>>();

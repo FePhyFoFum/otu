@@ -27,14 +27,28 @@ body {
 	padding: 0.2em 0.5em 0.3em 0.5em;
 	width: 20em;
 
+} #nodeEditor h3 {
+    border-width: .8em 0 0 0;
+    border-color: #888;
+    border-style: solid;
+
+/*    color: white;
+    background-color: #555; */
+
+    padding: 0.3em;
+    margin-top: 0.2em;
+
 } #nodeEditor .originalLabel {
     font-size: 0.9em;
 
 } #nodeEditor form {
-    background: #dedede;
+    background: #eee;
     padding: 0.3em;
     margin: 0 0 0.3em 0;
 //    border: 1px solid red;
+
+} #nodeEditor form#altMatchesForm {
+    background: #fbb;
 
 } #nodeEditor form input {
     margin: 0 0.3em 0 0;
@@ -465,7 +479,7 @@ function updateNodeEditor(node) {
 
     // name
     var name = node["ot:ottTaxonName"] ? node["ot:ottTaxonName"] : node["name"]; // todo: switch this to original label? Need to wait until peter implements the ot:ottTaxonName
-    $(nodeEditor).append("<h4>"+name+"</h4>");
+    $(nodeEditor).append("<h3>"+name+"</h3>");
 
     // original label
     if (name != node["ot:originalLabel"]) {
@@ -476,14 +490,12 @@ function updateNodeEditor(node) {
     var assignmentMessage = false;
     if (node["ot:ottolid"]) {
         assignmentMessage = 'Assigned to OTT taxon <a href="#">' + node["ot:ottolid"] + '</a>';
+        assignmentMessage += node.processed_by_tnrs ? ", validated by TNRS." : ", not yet validated by TNRS.";
+        assigned = true;
+    } else {
+        assignmentMessage = "Not assigned to any OTT taxon.";
     }
-    
-    if (assignmentMessage) {
-        var tnrsMessage = node.processed_by_tnrs ? ", validated by TNRS." : ", not yet validated by TNRS.";
-        $(nodeEditor).append($("<p>")
-                .append(assignmentMessage)
-                .append(tnrsMessage));
-    }
+    $(nodeEditor).append($("<p>").append(assignmentMessage));
     
     // alternative mappings
     $(nodeEditor).append($("<div>")
