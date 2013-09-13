@@ -59,9 +59,13 @@ body {
 } #nodeEditor form button {
     margin: 0;
 
-} #nodeEditor #autcompleteSuggestions {
-//    position: relative;
-    border: 1px solid red;
+} #autocompleteSuggestions {
+    border-left: 2px solid #999;
+    padding: 0 0 0 0.5em;
+    margin: 0.3em;
+
+} #autocompleteSuggestions li {
+    list-style: none;
 
 } #assignTagForm {
     height: 2em;
@@ -522,6 +526,8 @@ function updateNodeEditor(node) {
     
 //    alert(Object.keys(node));
     
+    var updateTimer;
+    
     // assign different taxon form
     $(nodeEditor).append($("<form>")
         .attr("id", "assignTaxonForm")
@@ -538,12 +544,18 @@ function updateNodeEditor(node) {
             .attr("type", "text")
             .attr("id", "taxonNameAutocomplete")
             .attr("name", "ottTaxonName"))
-            .on("input", function() { updateTaxonAutocomplete(); })
+            .on("input", function() {
+                clearAssignTaxonForm();
+                clearTimeout(updateTimer);
+                updateTimer = setTimeout(function() {
+                    updateTaxonAutocomplete()
+                }, 1000);
+            })
         .append($("<button>")
             .attr("type", "button")
-            .append("Assign")
-            .click(function() { submitTaxonAssignForm(); })
-        ));
+            .attr("id", "submitAssignTaxonButton")
+            .attr("disabled", "disabled")
+            .append("Assign")));
         
     // assign tag form
     $(nodeEditor).append($("<form>")
@@ -643,33 +655,38 @@ function displayAlternativeMappings(node) {
     xhr.send();
 }
 
+/////////////////////////////////////////////////
+//
+//      autocomplete search taxon assign form
+//
+
 function updateTaxonAutocomplete() {
     
-    var autcompleteService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/autocompleteTaxonName/";
+    var autocompleteService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/autocompleteTaxonName/";
 
     // submit the query for name strings longer than 2 characters
     var name = $("#taxonNameAutocomplete").val();
     if (name.length > 1) {
-        var xhr = getXhr(autcompleteService, function() {
+        var xhr = getXhr(autocompleteService, function() {
             
             matches = JSON.parse(xhr.responseText);
 
-            if ($("#autcompleteSuggestions")) {
-                $("#autcompleteSuggestions").remove();
+            if ($("#autocompleteSuggestions")) {
+                $("#autocompleteSuggestions").remove();
             }
             
             $("#assignTaxonForm")
                 .append($("<ul>")
-                    .attr("id", "autcompleteSuggestions"));
+                    .attr("id", "autocompleteSuggestions"));
                     
             $(matches).each(function(i, match) {
 
                 var matchEntry = match;
 
-                $("#autcompleteSuggestions")
+                $("#autocompleteSuggestions")
                     .append($("<li>")
                         .append(match.name)
-                        .click(function() { updateAssignTaxonForm(matchEntry); }));
+                        .click(function() { fillAssignTaxonForm(matchEntry); }));
             });
         });
         
@@ -677,8 +694,21 @@ function updateTaxonAutocomplete() {
     }
 }
 
-function submitTagAnnotation() {
-    alert("otu tagging not yet implemented");
+function clearAssignTaxonForm(matchEntry) {
+    $("#assignTaxonForm input[name='ottId']").val("");
+//    $("#assignTaxonForm input[name='ottTaxonName']").val("");    
+    $("#submitAssignTaxonButton")
+        .attr("disabled","disabled")
+        .click(undefined);
+}
+
+function fillAssignTaxonForm(matchEntry) {
+    $("#assignTaxonForm input[name='ottId']").val(matchEntry.ottId);
+    $("#assignTaxonForm input[name='ottTaxonName']").val(matchEntry.name);
+    $("#autocompleteSuggestions").remove();
+    $("#submitAssignTaxonButton")
+        .removeAttr("disabled")
+        .click(function() { submitTaxonAssignForm(); })
 }
 
 function submitTaxonAssignForm() {
@@ -696,6 +726,11 @@ function submitTaxonAssignForm() {
     assignTaxon(nodeId, data);
 }
 
+//////////////////////////////////////////////////
+//
+//      tnrs suggested fuzzy matches assign form
+//
+
 function submitAltMatchAssignment(matchEntry) {
 //    alert(JSON.stringify(matchEntry));
     
@@ -709,12 +744,15 @@ function submitAltMatchAssignment(matchEntry) {
         "types": ["integer", "string", "string"]
     });
     
-    alert(data);
-    
-    //
+//    alert(data);
     assignTaxon(nodeId, data);
     
 }
+
+//////////////////////////////////////////////////
+//
+//      general taxon assignment functions
+//
 
 function assignTaxon(nodeId, data) {
     
@@ -735,12 +773,19 @@ function assignTaxon(nodeId, data) {
     
 }
 
+//////////////////////////////////////////////////
+//
+//      tag annotations form
+//
 
-function updateAssignTaxonForm(matchEntry) {
-    $("#assignTaxonForm input[name='ottId']").val(matchEntry.ottId);
-    $("#assignTaxonForm input[name='ottTaxonName']").val(matchEntry.name);
-    $("#autcompleteSuggestions").remove();
+function submitTagAnnotation() {
+    alert("otu tagging not yet implemented");
 }
+
+//////////////////////////////////////////////////
+//
+//      general tree editor drawing functions
+//
 
 function setCoords() {
     bbox = document.getElementById("treeSVG").getBoundingClientRect();
