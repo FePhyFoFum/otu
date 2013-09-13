@@ -472,7 +472,7 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 	 * @param maxNodes
 	 * @return
 	 */
-	public static JadeTree getTreeFromNode(Node inRoot, int maxNodes) {
+	public static JadeTree getJadeTreeForGraphNode(Node inRoot, int maxNodes) {
 		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(RelType.CHILDOF, Direction.INCOMING);
 		JadeNode root = new JadeNode();
 		HashMap<Node, JadeNode> traveledNodes = new HashMap<Node, JadeNode>();
@@ -492,10 +492,17 @@ public class DatabaseBrowser extends DatabaseAbstractBase {
 			traveledNodes.put(curGraphNode, curNode);
 			
 			// TODO: fix this so it uses the specific taxon name properties
-			if (curGraphNode.hasProperty(NodeProperty.NAME.name)) {
+/*			if (curGraphNode.hasProperty(NodeProperty.NAME.name)) {
 				curNode.setName((String) curGraphNode.getProperty(NodeProperty.NAME.name));
 				//				curNode.setName(GeneralUtils.cleanName(String.valueOf(curGraphNode.getProperty(NodeProperty.NAME.name))));
 				// curNode.setName(GeneralUtils.cleanName(curNode.getName()));
+			} */
+			
+			if (curGraphNode.hasProperty(NodeProperty.OT_OTT_TAXON_NAME.name)) {
+				curNode.setName((String) curGraphNode.getProperty(NodeProperty.OT_OTT_TAXON_NAME.name));
+				
+			} else if (curGraphNode.hasProperty(NodeProperty.NAME.name)) {
+				curNode.setName((String) curGraphNode.getProperty(NodeProperty.NAME.name));				
 			}
 
 			curNode.assocObject("nodeId", curGraphNode.getId());

@@ -9,6 +9,9 @@
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
+} .treeHeader {
+    position: relative;
+
 } .treeHeader * {
     position: relative;
     margin-right: 0.22em;
@@ -182,28 +185,31 @@ function displayTreeInfo(treeId) {
                 .click(function() { submitTreeEditForm(treeId, formId) }));
 
         // write the header for this tree
-        var treeHeader = $(document.createElement("h3"))
-            .addClass("treeHeader")
+        $(treeForm)
+            .append($("<h3>")
+                .append("tree: " + treeId))
+            .append($("<form>")
+                .addClass("treeHeader")
 //            .append($(document.createElement("a"))
 //                .attr("href","tree_view.py?treeId=" + treeId)
 //                .append(treeId))
-            .append($(document.createElement("button"))
-                .attr("type","button")
-                .addClass("btn btn-large btn-success doNotHide editTreeBtn")
-                .click(function() { toggleTreeEditForm($("#"+formId)) })
-                .append("Edit Metadata"))
-            .append($(document.createElement("button"))
-                .attr("type", "button")
-                .addClass("btn btn-large btn-warning doNotHide")
-                .click(function() { window.location.href="tree_view.py?treeId=" + treeId; })
-                .append("Edit Tree"))
-            .append()
-            .append($(document.createElement("button"))
-                .attr("type","button")
-                .addClass("btn btn-large btn-danger doNotHide deleteTreeBtn")
-                .click(function() { deleteTree(treeId) })
-                .append("Delete Tree"));
-        $(treeForm).append(treeHeader);
+                .append($(document.createElement("button"))
+                    .attr("type","button")
+                    .addClass("btn btn-large btn-success doNotHide editTreeBtn")
+                    .click(function() { toggleTreeEditForm($("#"+formId)) })
+                    .append("Edit Metadata"))
+                .append($(document.createElement("button"))
+                    .attr("type", "button")
+                    .addClass("btn btn-large btn-primary doNotHide")
+                    .click(function() { window.location.href="tree_view.py?treeId=" + treeId; })
+                    .append("View Tree"))
+//                .append()
+                .append($(document.createElement("button"))
+                    .attr("type","button")
+                    .addClass("btn btn-large btn-danger doNotHide deleteTreeBtn")
+                    .click(function() { deleteTree(treeId) })
+                    .append("Delete Tree")));
+//        $(treeForm).append(treeHeader);
             
         // create the metadata table
         var keys = Object.keys(response.metadata);

@@ -126,7 +126,7 @@ public class treeJsons extends ServerPlugin{
 
 		// TODO: add check for whether tree is imported. If not then return error instead of just empty tree
 		Node rootNode = graphDb.getNodeById(nodeId);
-		JadeTree jadeTree = DatabaseBrowser.getTreeFromNode(rootNode, 300);
+		JadeTree jadeTree = DatabaseBrowser.getJadeTreeForGraphNode(rootNode, 300);
 
 		return OpentreeRepresentationConverter.convert(jadeTree);
 //		return t.getRoot().getJSON(false);

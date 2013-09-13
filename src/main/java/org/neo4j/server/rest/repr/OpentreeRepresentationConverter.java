@@ -114,6 +114,9 @@ public class OpentreeRepresentationConverter {
                             final FirstItemIterable<Representation> nested = convertValuesToRepresentations((Iterable) value);
                             return new ListRepresentation(getType(nested), nested);
 
+                    	} else if (value instanceof Map<?, ?>) {
+                            return GeneralizedMappingRepresentation.getMapRepresentation((Map<String, Object>) value);
+                            
                     	} else {
                             return getSingleRepresentation(value);
                         }

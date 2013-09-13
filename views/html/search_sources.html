@@ -95,7 +95,7 @@ function addResult(sourceId) {
 				// otherwise provide a button to load it
 				var loadForm = document.createElement("form");
 				$(loadForm).attr("style","display: inline")
-					.attr("action", "cgi-bin/load_sources.py").attr("method", "POST")
+					.attr("action", "load_sources.py").attr("method", "POST")
 					.append($(document.createElement("button")).attr("name","submit").attr("type","submit").attr("enctype","multipart/form-data").addClass("btn").css("width","5em").append("Import"))
 					.append('<input type="hidden" name="hidden_nexson_from_git" id="hidden_nexson_from_git" value="true" />')
 					.append('<input type="hidden" name="nexsonid" id="nexsonid" value="' + sourceId + '" />')

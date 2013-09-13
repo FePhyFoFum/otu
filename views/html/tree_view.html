@@ -58,7 +58,11 @@ body {
     
 } #nodeEditor form button {
     margin: 0;
-    
+
+} #nodeEditor #autcompleteSuggestions {
+//    position: relative;
+    border: 1px solid red;
+
 } #assignTagForm {
     height: 2em;
     
@@ -92,8 +96,8 @@ body {
             <h4 id="treeId"></h4>
             <div class="btn-group" data-toggle="buttons-radio">
                 <button type="button" class="btn btn-large btn-success" name="cac" value=1 id="refocusButton">Refocus</button>
-                <button type="button" class="btn btn-large btn-primary" name="cac" value=2>Reroot</button>
-                <button type="button" class="btn btn-large btn-primary" name="cac" value=3>Choose Ingroup</button>
+                <button type="button" class="btn btn-large btn-primary" name="cac" value=2 id="rerootButton">Reroot</button>
+                <button type="button" class="btn btn-large btn-primary" name="cac" value=3 id="ingroupButton">Choose Ingroup</button>
             </div>
             <button type="button" class="btn btn-large btn-warning" id="tnrsButton">Resolve taxon names</button>
             <button type="button" class="btn btn-large btn-danger" id="deleteTreeButton">Delete Tree</button>
@@ -126,8 +130,12 @@ var svg = d3.select("body").append("svg").attr("id","treeSVG")
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
-// ===== general setup
+///////////////////////////////////////////
+//
+//
+//      general setup
+//
+//
 
 // fill containers based on variables
 function setupPage(sourceId, treeId) {
@@ -147,7 +155,9 @@ function setupPage(sourceId, treeId) {
     document.getElementById("treeId").innerHTML = title;
     
     // setup buttons
-    $("#deleteTreeButton").click(function() { deleteTree(sourceId, treeId); });
+    $("#rerootButton").click(function() { displayAlert(); });
+    $("#ingroupButton").click(function() { displayAlert(); });
+    $("#deleteTreeButton").click(function() { var proceed = confirm("Are you sure you want to delete this tree? This cannot be undone."); if (proceed) { deleteTree(sourceId, treeId); } });
     $("#tnrsButton").click(function() { doTNRS(treeId); });
     
     resetRadio();
@@ -157,7 +167,12 @@ function resetRadio() {
     $('button[id="refocusButton"]').button('toggle');
 }
 
-// ===== dropdown menus for tree selection
+//////////////////////////////////////////
+//
+//
+//      dropdown menus for tree selection
+//
+//
 
 // gets a list of all trees *within the current study*
 function getSourceTreeList(sourceId, treeId) {
@@ -226,6 +241,7 @@ function getAllLocalTreeList(treeId) {
 //
 
 function setupTree(nodeId) {
+    rootNodeId = nodeId;
     var treeJSONService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getTreeJson";
     var xhr = getXhr(treeJSONService, function() {
         d3.json("", function(error, flare) {
@@ -290,7 +306,7 @@ function update(source) {
             } else if (ac == 3){ // ingroup
                 resetRadio();
                 designateIngroup(d.id);
-            } else if (ac == 4){ // export
+            } else if (ac == 4){ // export // not implemented?
                 resetRadio();
                 alert("behold! you wish to extract!!");
             } /* else if (ev.shiftKey) {
@@ -466,9 +482,9 @@ function updateNodeEditor(node) {
 
     /*
     // attempting to toggle node properties, currently not working
-    if (currentNode) {d3.select(currentNode).style("fill", node.within_ingroup ? "black" : "white");}
+    if (currentNode) {d3.select(currentNode).select("circle").style("fill", node.within_ingroup ? "black" : "white");}
     currentNode = node;
-    d3.select(currentNode).style("fill", "red");
+    d3.select(currentNode).select("circle").style("fill", "red");
     */
 
     $('#nodeEditor').remove();
@@ -504,6 +520,8 @@ function updateNodeEditor(node) {
         .attr("id","altMatchesContainer"));
     displayAlternativeMappings(node); // use ajax to populate the container
     
+//    alert(Object.keys(node));
+    
     // assign different taxon form
     $(nodeEditor).append($("<form>")
         .attr("id", "assignTaxonForm")
@@ -512,17 +530,19 @@ function updateNodeEditor(node) {
         .append($("<input>")
             .attr("type", "hidden")
             .attr("name", "nodeId")
-            .val(node.nodeId))
+            .val(node.id))
         .append($("<input>")
             .attr("type", "hidden")
             .attr("name", "ottId"))
         .append($("<input>")
             .attr("type", "text")
+            .attr("id", "taxonNameAutocomplete")
             .attr("name", "ottTaxonName"))
+            .on("input", function() { updateTaxonAutocomplete(); })
         .append($("<button>")
             .attr("type", "button")
             .append("Assign")
-            .click(function() { submitTaxonAssignment(); })
+            .click(function() { submitTaxonAssignForm(); })
         ));
         
     // assign tag form
@@ -577,11 +597,9 @@ function updateNodeEditor(node) {
 
 function displayAlternativeMappings(node) {
     var altMappingsService = "http://localhost:7474/db/data/ext/treeJsons/node/" + node.id + "/getTNRSMappings";
-//    alert(altMappingsService);
     var xhr = getXhr(altMappingsService, function() {
         
         var response = JSON.parse(xhr.responseText);
-//        alert(JSON.stringify(response));
 
         if (response.ids_ordered_by_score.length > 0) {
         
@@ -589,64 +607,145 @@ function displayAlternativeMappings(node) {
                 .append($("<form>")
                     .attr("id", "altMatchesForm")
                     .append("Assign a suggested match:<br/>"));
-            // TODO: display form with mappings
 
             var ids = response.ids_ordered_by_score
             var matches = response.alternate_matches;
             var idNameMap = {};
             for (var i=0; i < ids.length; i++) {
-        
-//                var id = ids[i];
-            
-//                alert(matches[ids[i]]);
             
                 var id = matches[ids[i]].matched_ott_id;
                 var score = (matches[ids[i]].score * 100).toFixed(0);
                 var name = matches[ids[i]].matched_name;
-                var description = " (" + matches[ids[i]].nomenclature_code
-                    + ") score: " + score;
+                var description = " (" + matches[ids[i]].nomenclature_code + ") score: " + score;
 
                 idNameMap[id] = name;
                         
                 $("#altMatchesForm")
                     .append($("<input>")
                         .attr("type", "radio")
-                        .attr("name", "taxonId")
+                        .attr("name", "ottId")
                         .val(matches[ids[i]]))
                     .append("<strong>" + name + "</strong> " + description)
                     .append("<br/>");
             }
         
             $("#altMatchesForm")
-                .append($("<input>")
+/*                .append($("<input>")
                     .attr("type", "hidden")
                     .attr("name", "namesForIds")
-                    .val(JSON.stringify(idNameMap)))
+                    .val(JSON.stringify(idNameMap))) */
                 .append($("<button>")
                     .attr("type", "button")
                     .append("Assign")
-                    .click(function() { submitAltMatchAssignment() }));
+                    .click(function() { submitAltMatchAssignment(matches[id]) }));
         } 
     });
     xhr.send();
 }
 
+function updateTaxonAutocomplete() {
+    
+    var autcompleteService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/autocompleteTaxonName/";
+
+    // submit the query for name strings longer than 2 characters
+    var name = $("#taxonNameAutocomplete").val();
+    if (name.length > 1) {
+        var xhr = getXhr(autcompleteService, function() {
+            
+            matches = JSON.parse(xhr.responseText);
+
+            if ($("#autcompleteSuggestions")) {
+                $("#autcompleteSuggestions").remove();
+            }
+            
+            $("#assignTaxonForm")
+                .append($("<ul>")
+                    .attr("id", "autcompleteSuggestions"));
+                    
+            $(matches).each(function(i, match) {
+
+                var matchEntry = match;
+
+                $("#autcompleteSuggestions")
+                    .append($("<li>")
+                        .append(match.name)
+                        .click(function() { updateAssignTaxonForm(matchEntry); }));
+            });
+        });
+        
+        xhr.send(JSON.stringify({"queryString": name}));
+    }
+}
+
 function submitTagAnnotation() {
+    alert("otu tagging not yet implemented");
+}
+
+function submitTaxonAssignForm() {
+
+    var nodeId = $("#assignTaxonForm input[name='nodeId']").val();
+    var ottId = $("#assignTaxonForm input[name='ottId']").val();
+    var ottName = $("#assignTaxonForm input[name='ottTaxonName']").val();
     
-    alert(Object.keys($("#assignTagForm")));
+    var data = JSON.stringify( {
+        "keys": ["ot:ottolid", "ot:ottTaxonName", "name"],
+        "values": [ottId, ottName, ottName],
+        "types": ["integer", "string", "string"]
+    });
+    
+    assignTaxon(nodeId, data);
+}
+
+function submitAltMatchAssignment(matchEntry) {
+//    alert(JSON.stringify(matchEntry));
+    
+    var nodeId = $("#assignTaxonForm input[name='nodeId']").val();
+    var ottId = matchEntry.matched_ott_id;
+    var ottName = matchEntry.matched_name;
+    
+    var data = JSON.stringify( {
+        "keys": ["ot:ottolid", "ot:ottTaxonName", "name"],
+        "values": [ottId, ottName, ottName],
+        "types": ["integer", "string", "string"]
+    });
+    
+    alert(data);
+    
+    //
+    assignTaxon(nodeId, data);
     
 }
 
-function submitTaxonAssignment() {
+function assignTaxon(nodeId, data) {
     
-    alert(Object.keys($("#assignTaxonForm")));
+    var assignTaxonService = "http://localhost:7474/db/data/ext/sourceJsons/node/" + nodeId + "/setBasicProperties";
+    var xhr = getXhr(assignTaxonService, function() {
+        
+        var response = JSON.parse(xhr.responseText);
+        if (response.event == "success") {
+            $("#nodeEditor").remove();
+            setupTree(rootNodeId);
+            setupTree(rootNodeId);
+        } else {
+            alert(response.message);
+        }
+    });
+    
+    xhr.send(data);
     
 }
 
-function submitAltMatchAssignment() {
-    
-    alert(Object.keys($("#altMappingsForm")));
-    
+
+function updateAssignTaxonForm(matchEntry) {
+    $("#assignTaxonForm input[name='ottId']").val(matchEntry.ottId);
+    $("#assignTaxonForm input[name='ottTaxonName']").val(matchEntry.name);
+    $("#autcompleteSuggestions").remove();
+}
+
+function setCoords() {
+    bbox = document.getElementById("treeSVG").getBoundingClientRect();
+    xo = bbox.left + margin.left;
+    yo = bbox.top + margin.top;
 }
 
 // close the node editor (if open) if the user clicks anywhere else
@@ -660,7 +759,6 @@ $(document).click(function(event) {
         }
     }
 });
-
 
 ///////////////////////////////////////
 //
@@ -691,7 +789,13 @@ function getSourceIdForTreeId(treeId) {
     return JSON.parse(xhr.responseText);
 }
 
-// ===== functions bound to buttons (server calls)
+//////////////////////////////////////////
+//
+//
+//      server calls bound to buttons
+//
+//
+//
 
 function doTNRS() {
 
@@ -700,11 +804,7 @@ function doTNRS() {
 
         // TODO: would be better to have "cancel" option set as default...
         var proceed = confirm("TNRS results already exist for this tree. Re-submitting the TNRS request will overwrite the existing results with new ones. Are you sure you want to do this?");
-        var x;
-        if (proceed) {
-            x = "Resubmit!";
-        } else {
-            x = "Cancel!";
+        if (!proceed) {
             return;
         }
     }
@@ -733,7 +833,8 @@ function doTNRS() {
     xhr.send(JSON.stringify({"useMappedNames": false}));
 }
 
-function deleteTree(sourceId, treeId){
+function deleteTree(sourceId, treeId) {
+    
     var deleteTreeService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/deleteTreeFromTreeId";
     xhr = getXhr(deleteTreeService, function() {
         var response = JSON.parse(xhr.responseText);
@@ -746,6 +847,7 @@ function deleteTree(sourceId, treeId){
 }
 
 function designateIngroup(nodeId){
+    
 	var ingroupService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/ingroupSelect";
     xhr = getXhr(ingroupService, function() {
 //        var jsonrespstr = xhr.responseText;
@@ -756,6 +858,7 @@ function designateIngroup(nodeId){
 }
 
 function reroot(nodeId){
+
     var rerootService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/rerootTree";
     xhr = getXhr(rerootService, function() {
 //        var jsonrespstr = xhr.responseText;
@@ -765,16 +868,35 @@ function reroot(nodeId){
     xhr.send(JSON.stringify({"nodeId": nodeId}));
 }
 
-// ===== onload and global
+function displayAlert() {
+    
+    if (alertsOn) {
+        alert("Warning! All edits to the tree are permanent, and there is no undo feature available (though you can revert your changes manually).\n\nThis message will be displayed the first time any permanent edit button is clicked when you visit this page. You may disable this in the Configure page.");
+    }
+    alertsOn = false;
+}
+
+///////////////////////////////////////
+//
+//
+//      onload and globals
+//
+//
+//
 
 var treeId;
+var rootNodeId;
 var sourceId;
 var xo; // the left side of the tree svg
 var yo; // the top of the tree svg
 var bbox; // the bounding box element for the tree svg
 
+var alertsOn = true; // default setting for the onpage alerts.
+
 // on page load
 $(document).ready(function() {
+
+    // TODO: get the alertsOn setting from the configuration settings of the db
 
     // if the tree id was not printed into a javascript variable by python
     if (!treeId) {
@@ -797,7 +919,7 @@ $(document).ready(function() {
 
     setupPage(sourceId, treeId);
 
-    var rootNodeId;
+//    var rootNodeId;
     if (treeId) {
         rootNodeId = getRootIdFromTreeId(treeId);
 
@@ -820,11 +942,7 @@ $(document).ready(function() {
 
 // when the tree svg loads, get its position for future reference
 $(document.getElementById("treeSVG")).ready(setCoords)
-function setCoords() {
-    bbox = document.getElementById("treeSVG").getBoundingClientRect();
-    xo = bbox.left + margin.left;
-    yo = bbox.top + margin.top;
-}
+
 
         </script>
     </body>

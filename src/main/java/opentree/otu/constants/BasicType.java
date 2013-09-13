@@ -5,8 +5,9 @@ package opentree.otu.constants;
  */
 public enum BasicType {
 
-	BOOLEAN (boolean.class),
-	NUMBER (double.class),
+	BOOLEAN (Boolean.class),
+	INTEGER (Integer.class),
+	DECIMAL (Double.class),
 	STRING (String.class);
 	
 	public final Class<?> type;
