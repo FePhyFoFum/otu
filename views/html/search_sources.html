@@ -12,6 +12,23 @@ body {
 } #resultsTable td {
     padding: 0 .3em 0 .3em;
 
+} #indexingForm {
+    position: absolute;
+    top: 8.7em;
+    right: 0;
+    width: 25em;
+    padding-right:3em;
+
+} #searchText, #propertySelect {
+    height: 2.2em;
+
+} #searchText {
+    width: 20em;
+    margin: 0 0.35em 0 0;
+
+} #propertySelect {
+    width: 15em;
+
 }
         </style>
     </head>
@@ -20,20 +37,20 @@ body {
         $$NAVBAR$$
     
         <div class="container">
-            <div style="position:absolute; top:8.7em; right:0; width: 25em; padding-right:3em;">
+            <div id="indexingForm">
                 <form class="form-inline">
-                    <button type="button" class="btn btn-large btn-primary" onclick="initRemoteIndexing(); return false;">Index remote sources for searching</button>
+                    <button type="button" class="btn btn-medium " onclick="initRemoteIndexing(); return false;">Index remote sources for searching</button>
                 </form>
             <div id="statusCount"></div>
             <div id="statusMessage"></div>
         </div>
-        <h2>Search all sources</h2>
+        <h3>Search all sources</h3>
             <form id="searchform" class="form-inline">
                 <div class="btn-group" data-toggle="buttons-radio">
-                    <input id="searchtext" type="text" style="height:3.2em; width:20em; margin:0 .35em 0 0;"></input>
-                    <select id="propertyselect" class="select-large" style="height: 3.2em; width:15em"></select>
+                    <input id="searchText" type="text"></input>
+                    <select id="propertySelect" class="select-large"></select>
                 </div>
-                <button type="button" class="btn btn-large btn-success" onclick="search(); return false;">Search</button>
+                <button type="button" class="btn btn-medium btn-primary" onclick="search(); return false;">Search</button>
             </form>
             <div id="results">
                 <table id="resultsTable"></table>
@@ -61,8 +78,8 @@ function search() {
     xobj.setRequestHeader("Accept", "");
     xobj.setRequestHeader("Content-Type","Application/json");
 
-    var property = $("#propertyselect").val();
-    var value = $("#searchtext").val();
+    var property = $("#propertySelect").val();
+    var value = $("#searchText").val();
     xobj.send(JSON.stringify({"property":property,"value":value}));
 }
 
@@ -243,7 +260,7 @@ function fillPropertyList(){
                 var item = document.createElement("option");
                 item.setAttribute("value", pMap[names[i]]);
                 item.innerHTML=names[i];
-                document.getElementById("propertyselect").appendChild(item);
+                document.getElementById("propertySelect").appendChild(item);
             });
         }
     }

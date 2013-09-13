@@ -9,12 +9,12 @@
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
-} .treeHeader {
+/*} .treeHeader {
     position: relative;
+    border: 1px solid red;
 
 } .treeHeader * {
-    position: relative;
-    margin-right: 0.22em;
+    position: relative; */
 
 } #editSourceBtn, .editTreeBtn {
     width: 10em;
@@ -34,13 +34,21 @@ body {
 } .deleteTreeBtn {
     position: absolute;
     top: 0;
-    left: 25em;
+
+} #statusReport {
+/*    padding: 0.2em 0 0.2em 0.4em; */
 
 } #format {
     margin-top: 2em;
 
 } .editForm {
-    position: relative;    
+    position: relative;
+
+} .editForm * {
+    margin-right: 0.22em;
+
+} .formTable {
+    margin-top: 0.8em;
 
 } .formTable tr td .form-control {
     font-size: 1em;
@@ -72,19 +80,19 @@ body {
 	                <button id="loadselectBtn" type="button" class="btn" onClick='loadDifferentSource()'>Load</button>
 	            </form>
             </div>
-            <h4 id="sourceTitle"></h4>
+            <h3 id="sourceTitle"></h3>
+	        <button type="button" class="btn btn-medium " name="cac" value=1 id="exportBtn">Export to file</button>
+	        <button type="button" class="btn btn-medium " name="cac" value=0 id="editSourceBtn">Edit metadata</button>
+	        <button type="button" class="btn btn-medium " name="cac" value=3 id="deleteSourceLocalBtn">Delete local copy</button>
 	        <div class="btn-group">
-	            <button type="button" class="btn btn-large btn-success" name="cac" value=0 id="editSourceBtn">Edit Metadata</button>
-	            <button type="button" class="btn btn-large btn-success" name="cac" value=1 id="exportBtn">Export</button>
+    	        <button type="button" class="btn btn-medium  disabled" name="cac" value=2 id="pushSourceBtn">Push changes</button>
+    	        <button type="button" class="btn btn-medium  disabled" name="cac" value=3 id="deleteSourceGitBtn">Delete from public repo</button>
 	        </div>
-	        <button type="button" class="btn btn-large btn-primary" name="cac" value=2 id="pushSourceBtn">Push Changes</button>
-	        <button type="button" class="btn btn-large btn-danger" name="cac" value=3 id="deleteSourceLocalBtn">Delete Local Copy</button>
-	        <button type="button" class="btn btn-large btn-danger" name="cac" value=3 id="deleteSourceGitBtn">Delete from Git</button>
             <br/>
             <br/>
             <form id="sourceEditForm" style="position: relative;">
-                <h3>Source Info</h3>
-                <button name="submitSourceEditsBtn" id="submitSourceEditsBtn" type="button" class="btn btn-large btn-success hidden">Submit Changes</button>
+                <div id="statusReport"></div>
+                <button name="submitSourceEditsBtn" id="submitSourceEditsBtn" type="button" class="btn btn-medium btn-success hidden">Save changes</button>
                 <table class="table table-striped formTable" id="sourceInfoTable"></table>
             </form>
             <div id="treeInfo"></div>
@@ -106,7 +114,7 @@ function populateSourceListDropdown() {
 }
 
 // called on page load to fill in the page content using content from neo4j services
-function displaySourceInfo(){
+function displaySourceInfo() {
     var sourceMetadataService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getSourceMetaData";
 
     // set the callback, which will print the result of the request
@@ -115,22 +123,27 @@ function displaySourceInfo(){
 
         // exit early if there is no result
         if (!response.metadata) {
-            $("#sourceTitle").html("Nothing found for source " + activeSourceId);
+            
+            // specify that nothing was found if we do in fact have a source id
+            if (activeSourceId != "undefined") {
+                $("#sourceTitle").html("No source found");
+            }
+            
             $("button").each(function(i, element) {
                 if ($(element).attr("id") != "loadselectBtn") {
                     $(element).addClass("disabled").click(undefined);
                 }
             });
-            //.removeClass("disabled");
-            return false;
+            
+            return; // exit early
         };
         
         // set event handlers here so the buttons remain inactive if there is no result
-        $("#editSourceBtn").click(function() { toggleSourceEditForm() });
 	    $("#exportBtn").click(function() { exportSource() });
-	    $("#pushSourceBtn").click(function() { pushSource() });
+        $("#editSourceBtn").click(function() { toggleSourceEditForm() });
 	    $("#deleteSourceLocalBtn").click(function() { deleteSourceLocal() });
-	    $("#deleteSourceGitBtn").click(function() { deleteSourceGit() });
+//	    $("#pushSourceBtn").click(function() { pushSource() });
+//	    $("#deleteSourceGitBtn").click(function() { deleteSourceGit() });
 	    $("#submitSourceEditsBtn").click(function() { submitSourceEditForm() });
         
         var keys = Object.keys(response.metadata);
@@ -149,9 +162,8 @@ function displaySourceInfo(){
             $("#sourceInfoTable").append(getFormTableRow(property, value, link));
         });
         
-        // TODO: should say something about the status of this source
-        $('#sourceInfoTable').append('<tr><td><b>Status</b></td><td>Info about mapped names, rooting, ingroup</td></tr>');
-        $('#sourceInfoTable').append('</table>');
+        // TODO: update the status message about this source
+        $("#statusReport").append("Status: info about mapped names, rooting, ingroup, X% complete will go here");
         
         // add the trees
         $(response.trees).each(function(i, treeId) {
@@ -171,44 +183,41 @@ function displayTreeInfo(treeId) {
         // create the form and add initial elements
         var formId = "treeEditForm" + treeId;
         var response = JSON.parse(xhr.responseText);
-        var treeForm = $(document.createElement("form"))
-            .addClass("editForm")
-            .attr("id",formId)
-            .append($(document.createElement("input"))
-                .attr("type","hidden")
-                .attr("name","treeId")
-                .val(treeId))
-            .append($(document.createElement("button"))
-                .addClass("btn btn-large btn-success hidden submitTreeEditsBtn")
-                .attr("type","button")
-                .append("Submit Changes")
-                .click(function() { submitTreeEditForm(treeId, formId) }));
+        var treeForm = $(document.createElement("form")) //); //.addClass("treeHeader");
 
         // write the header for this tree
-        $(treeForm)
-            .append($("<h3>")
-                .append("tree: " + treeId))
-            .append($("<form>")
-                .addClass("treeHeader")
+//        $(treeForm)
+            .addClass("editForm")
+//            .append($("<form>")
+            .attr("id",formId)
 //            .append($(document.createElement("a"))
 //                .attr("href","tree_view.py?treeId=" + treeId)
 //                .append(treeId))
                 .append($(document.createElement("button"))
-                    .attr("type","button")
-                    .addClass("btn btn-large btn-success doNotHide editTreeBtn")
-                    .click(function() { toggleTreeEditForm($("#"+formId)) })
-                    .append("Edit Metadata"))
-                .append($(document.createElement("button"))
                     .attr("type", "button")
-                    .addClass("btn btn-large btn-primary doNotHide")
+                    .addClass("btn btn-medium doNotHide")
                     .click(function() { window.location.href="tree_view.py?treeId=" + treeId; })
-                    .append("View Tree"))
-//                .append()
+                    .append("View tree"))
                 .append($(document.createElement("button"))
                     .attr("type","button")
-                    .addClass("btn btn-large btn-danger doNotHide deleteTreeBtn")
+                    .addClass("btn btn-medium doNotHide editTreeBtn")
+                    .click(function() { toggleTreeEditForm($("#"+formId)) })
+                    .append("Edit metadata"))
+                .append($(document.createElement("button"))
+                    .attr("type","button")
+                    .addClass("btn btn-medium doNotHide deleteTreeBtn")
                     .click(function() { deleteTree(treeId) })
-                    .append("Delete Tree")));
+                    .append("Delete tree"))
+                .append($(document.createElement("input"))
+                    .attr("type","hidden")
+                    .attr("name","treeId")
+                    .val(treeId))
+                .append($(document.createElement("button"))
+                    .addClass("btn btn-medium btn-success hidden submitTreeEditsBtn")
+                    .attr("type","button")
+                    .append("Save changes")
+                    .click(function() { submitTreeEditForm(treeId, formId) }));
+
 //        $(treeForm).append(treeHeader);
             
         // create the metadata table
@@ -225,7 +234,7 @@ function displayTreeInfo(treeId) {
 
         // add the tree metadata to the page
         $(treeForm).append(treeTable);
-        $("#treeInfo").append(treeForm);
+        $("#treeInfo").append($("<h4>").append("Tree " + treeId)).append(treeForm);
     });
     
     xhr.send(JSON.stringify({"treeId": treeId}));
@@ -268,10 +277,10 @@ function toggleSourceEditForm() {
 
     toggleEditForm("#sourceEditForm");
 
-    if ($("#editSourceBtn").hasClass("btn-success")) {
-        $("#editSourceBtn").removeClass("btn-success").addClass(" btn-warning").html("Cancel Edits");
+    if (! $("#editSourceBtn").hasClass("btn-warning")) {
+        $("#editSourceBtn").addClass(" btn-warning").html("Cancel edits");
     } else {
-        $("#editSourceBtn").addClass(" btn-success").removeClass("btn-warning").html("Edit Metadata");
+        $("#editSourceBtn").removeClass("btn-warning").html("Edit metadata");
     } 
 }
 
@@ -279,10 +288,10 @@ function toggleTreeEditForm(treeEditForm) {
 
     toggleEditForm(treeEditForm);
 
-    if ($(treeEditForm).find(".editTreeBtn").hasClass("btn-success")) {
-        $(treeEditForm).find(".editTreeBtn").removeClass("btn-success").addClass(" btn-warning").html("Cancel Edits");
+    if (! $(treeEditForm).find(".editTreeBtn").hasClass("btn-warning")) {
+        $(treeEditForm).find(".editTreeBtn").addClass(" btn-warning").html("Cancel edits");
     } else {
-        $(treeEditForm).find(".editTreeBtn").addClass(" btn-success").removeClass("btn-warning").html("Edit Metadata");
+        $(treeEditForm).find(".editTreeBtn").removeClass("btn-warning").html("Edit metadata");
     } 
 }
 
@@ -366,6 +375,10 @@ function pushSource() {
 }
 
 function deleteSourceLocal() {
+
+    var proceed = confirm("Are you sure you want to remove this source? There is no way to undo this action and all changes that have not been pushed will be lost.");
+    if (! proceed) { return; }
+
     var deleteLocalSourceService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/deleteSourceFromSourceId";
     xhr = getXhr(deleteLocalSourceService, function() {
 //        var response = JSON.parse(xhr.responseText);
@@ -384,10 +397,14 @@ function deleteSourceLocal() {
 }
 
 function deleteSourceGit() {
-    alert("this will delete the source from git");
+    alert("this will delete the source from git. There should be a very explicit and terrifying warning and at least one level of confirmation required to do this. Would also be good to have people re-enter their password");
 }
 
 function deleteTree(treeId) {
+
+    var proceed = confirm("Are you sure you want to remove this tree? There is no way to undo this action.");
+    if (! proceed) { return; }
+
     var treeDeleteService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/deleteTreeFromTreeId";
     var xhr = getXhr(treeDeleteService, function() {
         response = JSON.parse(xhr.responseText);
@@ -405,11 +422,17 @@ $(document).ready(function() {
     activeSourceId = getQueryVariable('sourceId');
 
     if (! activeSourceId) {
-        activeSourceId = "undefined"
+        // set this to a string so it is accepted by various services that
+        // need to be called whether we have a source or not
+        activeSourceId = "undefined";
+        $("#sourceTitle").append("No source specified");
+    } else {
+        $("#sourceTitle").append("Viewing source " + activeSourceId);
     }
-    $("#sourceTitle").append("Viewing source with id " + activeSourceId);
+    
     populateSourceListDropdown();
     displaySourceInfo();
+
 });
 
     </script>

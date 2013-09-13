@@ -93,14 +93,14 @@ body {
                     </form>
                 </div>
             </div>
-            <h4 id="treeId"></h4>
+            <h3 id="treeId"></h3>
             <div class="btn-group" data-toggle="buttons-radio">
-                <button type="button" class="btn btn-large btn-success" name="cac" value=1 id="refocusButton">Refocus</button>
-                <button type="button" class="btn btn-large btn-primary" name="cac" value=2 id="rerootButton">Reroot</button>
-                <button type="button" class="btn btn-large btn-primary" name="cac" value=3 id="ingroupButton">Choose Ingroup</button>
+                <button type="button" class="btn btn-medium " name="cac" value=1 id="refocusButton">Refocus</button>
+                <button type="button" class="btn btn-medium " name="cac" value=2 id="rerootButton">Reroot</button>
+                <button type="button" class="btn btn-medium " name="cac" value=3 id="ingroupButton">Choose Ingroup</button>
             </div>
-            <button type="button" class="btn btn-large btn-warning" id="tnrsButton">Resolve taxon names</button>
-            <button type="button" class="btn btn-large btn-danger" id="deleteTreeButton">Delete Tree</button>
+            <button type="button" class="btn btn-medium " id="tnrsButton">Resolve taxon names</button>
+            <button type="button" class="btn btn-medium " id="deleteTreeButton">Delete Tree</button>
             <div id="resultsSummary"></div>
         </div>
 
@@ -147,10 +147,10 @@ function setupPage(sourceId, treeId) {
     // set title
     var title
     if (sourceId) {
-        title = 'Editing tree ' + treeId + ' from source '
+        title = 'Viewing tree ' + treeId + ' from source '
             + '<a href="source_view.py?sourceId=' + sourceId + '">' + sourceId + '</a>';
     } else {
-        title = "No tree selected"
+        title = "No tree specified"
     }
     document.getElementById("treeId").innerHTML = title;
     
