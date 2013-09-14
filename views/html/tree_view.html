@@ -10,12 +10,20 @@
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
+} #deleteRecordButtons {
+
 } #loadFormContainer {
     position: absolute;
     top: 6.7em;
     right:3em;
     width: 22em;
     padding-right:0em;
+
+} #statusMessage {
+    display: inline-block;
+    font-size: 0.9em;
+    margin-top: -0.6em;
+    margin-bottom: 0.6em;
 
 } #resultsSummary {
     margin-top: 0.5em;
@@ -98,13 +106,20 @@ body {
                 </div>
             </div>
             <h3 id="treeId"></h3>
-            <div class="btn-group" data-toggle="buttons-radio">
-                <button type="button" class="btn btn-medium " name="cac" value=1 id="refocusButton">Refocus</button>
-                <button type="button" class="btn btn-medium " name="cac" value=2 id="rerootButton">Reroot</button>
-                <button type="button" class="btn btn-medium " name="cac" value=3 id="ingroupButton">Choose Ingroup</button>
+            <span id="statusMessage"></span>
+            <div id="buttonBar">
+                <div class="btn-group" data-toggle="buttons-radio" id="editingButtons">
+                    <button type="button" class="btn btn-medium " name="cac" value=1 id="refocusButton">Refocus</button>
+                    <button type="button" class="btn btn-medium " name="cac" value=2 id="rerootButton">Reroot</button>
+                    <button type="button" class="btn btn-medium " name="cac" value=3 id="ingroupButton">Choose Ingroup</button>
+                </div>
+                <button type="button" class="btn btn-medium " id="tnrsButton">Resolve taxon names</button>
+                <div class="btn-group" id="deleteRecordButtons">
+                    <button type="button" class="btn btn-medium " name="cac" value=2 id="recordButton">Record my edits</button>
+                    <button type="button" class="btn btn-medium " name="cac" value=1 id="revertButton">Revert to saved copy</button>
+                    <button type="button" class="btn btn-medium " id="deleteTreeButton">Delete Tree</button>
+                </div>
             </div>
-            <button type="button" class="btn btn-medium " id="tnrsButton">Resolve taxon names</button>
-            <button type="button" class="btn btn-medium " id="deleteTreeButton">Delete Tree</button>
             <div id="resultsSummary"></div>
         </div>
 
@@ -134,42 +149,6 @@ var svg = d3.select("body").append("svg").attr("id","treeSVG")
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-///////////////////////////////////////////
-//
-//
-//      general setup
-//
-//
-
-// fill containers based on variables
-function setupPage(sourceId, treeId) {
-
-    // fill dropdowns
-    getSourceTreeList(sourceId, treeId);
-    getAllLocalTreeList(treeId);
-    
-    // set title
-    var title
-    if (sourceId) {
-        title = 'Viewing tree ' + treeId + ' from source '
-            + '<a href="source_view.py?sourceId=' + sourceId + '">' + sourceId + '</a>';
-    } else {
-        title = "No tree specified"
-    }
-    document.getElementById("treeId").innerHTML = title;
-    
-    // setup buttons
-    $("#rerootButton").click(function() { displayAlert(); });
-    $("#ingroupButton").click(function() { displayAlert(); });
-    $("#deleteTreeButton").click(function() { var proceed = confirm("Are you sure you want to delete this tree? This cannot be undone."); if (proceed) { deleteTree(sourceId, treeId); } });
-    $("#tnrsButton").click(function() { doTNRS(treeId); });
-    
-    resetRadio();
-}
-
-function resetRadio() {
-    $('button[id="refocusButton"]').button('toggle');
-}
 
 //////////////////////////////////////////
 //
@@ -252,6 +231,7 @@ function setupTree(nodeId) {
             root = JSON.parse(xhr.responseText);
             root.x0 = height / 2;
             root.y0 = 0;
+            
             update(root);
             update(root);
         });            
@@ -305,13 +285,13 @@ function update(source) {
             if (ac == 1){ // refocus
                 setupTree(d.id);	
             } else if (ac == 2 ){ // reroot
-                resetRadio();
+                resetEditRadio();
                 reroot (d.id);
             } else if (ac == 3){ // ingroup
-                resetRadio();
+                resetEditRadio();
                 designateIngroup(d.id);
             } else if (ac == 4){ // export // not implemented?
-                resetRadio();
+                resetEditRadio();
                 alert("behold! you wish to extract!!");
             } /* else if (ev.shiftKey) {
                 // can also use ev.ctrlKey, etc. try alert(Object.keys(ev)) to see more
@@ -762,7 +742,7 @@ function assignTaxon(nodeId, data) {
         var response = JSON.parse(xhr.responseText);
         if (response.event == "success") {
             $("#nodeEditor").remove();
-            setupTree(rootNodeId);
+//            setupTree(rootNodeId);
             setupTree(rootNodeId);
         } else {
             alert(response.message);
@@ -824,7 +804,7 @@ function getRootIdFromTreeId(treeId) {
 // Get the source id for a tree id
 function getSourceIdForTreeId(treeId) {
 
-    if( treeId == false || treeId == "" ) {
+    if( treeId == false || treeId == "undefined" ) {
         return false;
     }
     
@@ -843,6 +823,8 @@ function getSourceIdForTreeId(treeId) {
 //
 
 function doTNRS() {
+
+    if (!isWorkingCopy) { makeWorkingCopy(null, doTNRS); return false; }
 
     // need to adjust this check to work with new tnrs storage
     if (/*Object.keys(tnrsResultsById).length > 0*/ false) {
@@ -893,10 +875,10 @@ function deleteTree(sourceId, treeId) {
 
 function designateIngroup(nodeId){
     
+    if (!isWorkingCopy) { makeWorkingCopy(nodeId, designateIngroup); return false; }
+    
 	var ingroupService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/ingroupSelect";
-    xhr = getXhr(ingroupService, function() {
-//        var jsonrespstr = xhr.responseText;
-//        var evjson = eval(jsonrespstr);
+    var xhr = getXhr(ingroupService, function() {
         setupTree(xhr.responseText);
 	});
 	xhr.send(JSON.stringify({"nodeId": nodeId}));
@@ -904,21 +886,130 @@ function designateIngroup(nodeId){
 
 function reroot(nodeId){
 
+    if (!isWorkingCopy) { makeWorkingCopy(nodeId, reroot); return false; }
+
     var rerootService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/rerootTree";
-    xhr = getXhr(rerootService, function() {
-//        var jsonrespstr = xhr.responseText;
-//        var evjson = eval(jsonrespstr);
+    var xhr = getXhr(rerootService, function() {
         setupTree(JSON.parse(xhr.responseText));
     });
     xhr.send(JSON.stringify({"nodeId": nodeId}));
 }
 
-function displayAlert() {
+function makeWorkingCopy(nodeIdOfInterest, callback) {
     
-    if (alertsOn) {
-        alert("Warning! All edits to the tree are permanent, and there is no undo feature available (though you can revert your changes manually).\n\nThis message will be displayed the first time any permanent edit button is clicked when you visit this page. You may disable this in the Configure page.");
+    if (isWorkingCopy) {
+        alert("attempt to create a working copy when this already is one");
+        return;
     }
-    alertsOn = false;
+
+    var workingCopyService = "http://localhost:7474/db/data/ext/treeJsons/node/" + getRootIdFromTreeId(treeId) + "/makeWorkingCopy";
+    var xhr = getXhr(workingCopyService, function() {
+    
+        response = JSON.parse(xhr.responseText);
+    
+        if(response.event == "success") {
+            isWorkingCopy = true;
+            
+            // TODO: we should have an option for the makeWorkingCopy method on the back end to
+            // accept a node id and return the new node id for the corresponding node in the working
+            // copy that is made. Otherwise if we make a working copy only when someone attempts to
+            // edit a node, we have no way of knowing which node in the working copy to apply the
+            // edit to since all the nodes in the working copy are new.
+            
+            var newRootId = response.working_root_node_id;
+            rootNodeId = newRootId;
+//            setupTree(newRootId);
+
+            if(callback) {
+                callback(response.node_of_interest_new_id);
+            }
+            
+            isWorkingCopy = true;
+            updateWorkingCopyStatus();
+            
+//            alert("A working copy of the tree has been created to record your edits. Please try your last command again.");
+        } else {
+            alert(response.message);
+        }
+	});
+/*
+    if (workingCopyAlertsOn) {
+        alert("A note about editing trees:\n\nEdits to trees are stored in the database. To allow you to revert changes, we will create "
+            + "a working copy of this tree. All future edits will also be applied to the working copy. You may record your edits permanently "
+            + "with the 'Record my edits' button, which will replace the original tree. If you do not wish to record your edits, you may "
+            + "choose to discard them using the 'Revert to saved copy' button.\n\nYou may choose to record or discard your edits at a future "
+            + "time: you will not lose any unrecorded edits by leaving this page. Once you click 'Record my edits', however, the original "
+            + "version of this tree will be permanently overwritten with your edited copy. You must record your edits in this way before you "
+            + "can publish the edited tree to the public datastore.\n\nThis message will be displayed the first time we create a working copy "
+            + "of any tree. You may disable this in the Configure page.");
+    }
+*/
+
+    xhr.send(JSON.stringify({"nodeIdOfInterest":nodeIdOfInterest}));
+}
+
+function recordEdits() {
+    
+    var proceed = confirm("Are you sure you want to record your edits? This will overwrite the previously saved tree and cannot be undone.");
+    if (!proceed) { return false; }
+    
+    var recordService = "http://localhost:7474/db/data/ext/treeJsons/node/" + getRootIdFromTreeId(treeId) + "/saveWorkingCopy";
+    xhr = getXhr(recordService, function() {
+    
+        response = JSON.parse(xhr.responseText);
+    
+        if(response.event == "success") {
+//            alert(JSON.stringify(response));
+            var newRootId = response.saved_root_node_id;
+            setupTree(newRootId);
+            setupTree(newRootId);
+            
+            isWorkingCopy = false;
+            updateWorkingCopyStatus();
+//            alert("Your edits to the tree have been saved. A new working copy will be created if you make more changes.");
+        } else {
+            alert(response.message);
+        }
+    });
+    xhr.send();
+}
+
+function revertEdits() {
+
+    var proceed = confirm("Are you sure you want to discard your edits? This cannot be undone.");
+    if (!proceed) { return false; }
+    
+    var revertService = "http://localhost:7474/db/data/ext/treeJsons/node/" + getRootIdFromTreeId(treeId) + "/discardWorkingCopy";
+    xhr = getXhr(revertService, function() {
+    
+        response = JSON.parse(xhr.responseText);
+    
+        if(response.event == "success") {
+//            alert(JSON.stringify(response));
+            var newRootId = response.restored_original_root_node_id;
+            setupTree(newRootId);
+            setupTree(newRootId);
+            
+            isWorkingCopy = false;
+            updateWorkingCopyStatus();
+//            alert("Your edits to the tree have been discarded. A new working copy will be created if you make more changes.");
+        } else {
+            alert(response.message);
+        }
+    });
+    xhr.send();
+}
+
+function updateWorkingCopyStatus() {
+    if (isWorkingCopy) {
+        $("#recordButton").removeAttr("disabled").click(function() { recordEdits(); });
+        $("#revertButton").removeAttr("disabled").click(function() { revertEdits(); });
+        $("#statusMessage").html("Viewing <strong>working copy</strong>. Click 'Record my edits' to record changes or 'Revert to saved copy' to discard them.");
+    } else {
+        $("#recordButton").attr("disabled","disabled").unbind("click");
+        $("#revertButton").attr("disabled","disabled").unbind("click");
+        $("#statusMessage").html("Viewing <strong>saved copy</strong>.");
+    }
 }
 
 ///////////////////////////////////////
@@ -929,6 +1020,10 @@ function displayAlert() {
 //
 //
 
+function resetEditRadio() {
+    $('button[id="refocusButton"]').button('toggle');
+}
+
 var treeId;
 var rootNodeId;
 var sourceId;
@@ -936,56 +1031,83 @@ var xo; // the left side of the tree svg
 var yo; // the top of the tree svg
 var bbox; // the bounding box element for the tree svg
 
-var alertsOn = true; // default setting for the onpage alerts.
+// default setting for the onpage alerts. currently hardcoded on, but should
+// be set from a configuration setting from the db
+var workingCopyAlertsOn = true;
+
+// will be set to true if the tree is a working copy. checked every time we do a storable
+// edit, and if not true, a working copy will be created before the edit is performed
+var isWorkingCopy;
 
 // on page load
 $(document).ready(function() {
 
-    // TODO: get the alertsOn setting from the configuration settings of the db
+    // TODO: remove alert features once the working copy thing is implemented
 
-    // if the tree id was not printed into a javascript variable by python
-    if (!treeId) {
-    
-        // attempt to get the tree id from the incoming form
-        treeId = getQueryVariable('treeId');
-    }
-    
+    // get the tree id from the incoming GET variables
+    treeId = getQueryVariable('treeId');
+
     sourceId = false;
-//    alert(treeId);  
-
     if (!treeId) {
         // if no tree id, disable buttons
         $("button").each(function(i, element) {
             $(element).addClass("disabled").click(undefined);
         });
+        
+        // dummy variables so services for dropdowns don't barf
+        treeId = "undefined";
+        sourceId = "undefined";
+
     } else {
+        // otherwise get the source id for this tree
         sourceId = getSourceIdForTreeId(treeId);
     }
 
-    setupPage(sourceId, treeId);
-
-//    var rootNodeId;
-    if (treeId) {
+    // fill dropdowns (whether we have a tree or not)
+    getSourceTreeList(sourceId, treeId);
+    getAllLocalTreeList(treeId);
+    
+    // set up the page according to whether we have a tree or not
+    var title
+    rootNodeId = false;
+    if (treeId != "undefined") {
+        title = 'Viewing tree ' + treeId + ' from source '
+            + '<a href="source_view.py?sourceId=' + sourceId + '">' + sourceId + '</a>';
         rootNodeId = getRootIdFromTreeId(treeId);
 
+        // get information about the root node
+        var rootNodeService="http://localhost:7474/db/data/node/"+rootNodeId;
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", rootNodeService, false);
+        xhr.setRequestHeader("Accept", "*/*");
+        xhr.setRequestHeader("Content-Type","Application/json");
+        xhr.send();
+        
+        // report the status of working/saved copy
+        var rootData = JSON.parse(xhr.responseText).data;
+        isWorkingCopy = rootData.is_working_copy ? true : false;
+        updateWorkingCopyStatus();
+        
+        // setup buttons
+        $("#deleteTreeButton").click(function() { var proceed = confirm("Are you sure you want to delete this tree? This cannot be undone."); if (proceed) { deleteTree(sourceId, treeId); } });
+        $("#tnrsButton").click(function() { doTNRS(treeId); });
+        resetEditRadio();
+        
+    } else {
+        title = "No tree specified"
+    }
+    document.getElementById("treeId").innerHTML = title;
+
+    // display the tree if we have one
+    if (rootNodeId) {
         // do it twice to get the height right // TODO: fix this...
         setupTree(rootNodeId);
         setupTree(rootNodeId);
-
 //        d3.select(self.frameElement).style("height", "800px");
-    }
-
-/*    if (tnrsResults) {
-        displayTNRSResults();
-    } */
-    
-    // fill the tree selector dropdowns even if there is no tree loaded 
-    getSourceTreeList(sourceId, treeId);
-    getAllLocalTreeList(treeId);
-        
+    }        
 });
 
-// when the tree svg loads, get its position for future reference
+// when the tree svg loads, get its position for future reference by the node editor
 $(document.getElementById("treeSVG")).ready(setCoords)
 
 

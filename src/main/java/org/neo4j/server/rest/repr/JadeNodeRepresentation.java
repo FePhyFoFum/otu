@@ -59,6 +59,7 @@ public class JadeNodeRepresentation extends MappingRepresentation {
 					}
 					
 					
+					
 /*					if (jadeNode.getObject(NodeProperty.PROCESSED_BY_TNRS.name) != null) {
 						serializer.putBoolean(NodeProperty.PROCESSED_BY_TNRS.name, true);
 					} */

@@ -63,6 +63,111 @@ public class treeJsons extends ServerPlugin{
 	/**
 	 * @param nodeId
 	 * @return
+	 * @throws NoSuchTreeException 
+	 */
+	@Description( "Make a working copy of the tree below the designated root node" )
+	@PluginTarget( Node.class )
+	public Representation makeWorkingCopy(@Source Node root,
+			@Description("The id of any node in the original tree, whose counterpart in the copied tree will be identified in the response. "
+					+ "If no node with this id is found in the original tree, then null will be returned for the corresponding node id.")
+				@Parameter(name="nodeIdOfInterest", optional=true) Long nodeIdOfInterest) throws NoSuchTreeException {
+
+		DatabaseManager manager = new DatabaseManager(root.getGraphDatabase());
+
+		// TODO: add check for whether the provided node is the root node of a tree. If not then return this information
+
+		Transaction tx = root.getGraphDatabase().beginTx();
+		Map<String, Object> result = null;
+		try {
+			result = manager.makeWorkingCopyOfTree(root, nodeIdOfInterest);
+			tx.success();
+		} finally {
+			tx.finish();
+		}
+		
+		if (result == null) {
+			result = new HashMap<String, Object>();
+			result.put("event", "failure");
+			result.put("message", "designated tree could not be copied");
+		} else {
+			result.put("event", "success");
+		}
+
+		return OpentreeRepresentationConverter.convert(result);
+	}
+	
+	/**
+	 * @param nodeId
+	 * @return
+	 * @throws NoSuchTreeException 
+	 */
+	@Description( "Save the working copy that this node is the root of" )
+	@PluginTarget( Node.class )
+	public Representation saveWorkingCopy(@Source Node root) throws NoSuchTreeException {
+
+		DatabaseManager manager = new DatabaseManager(root.getGraphDatabase());
+
+		// TODO: add check for whether the provided node is the root node of a tree. If not then return this information
+
+		Transaction tx = root.getGraphDatabase().beginTx();
+		Node savedRoot = null;
+		try {
+			savedRoot = manager.saveWorkingCopy(root);
+			tx.success();
+		} finally {
+			tx.finish();
+		}
+		
+		Map<String, Object> result = new HashMap<String, Object>();
+		if (savedRoot == null) {
+			result.put("event", "failure");
+			result.put("message", "could not save working copy");
+		} else {
+			result.put("event", "success");
+			result.put("saved_root_node_id", savedRoot.getId());
+		}
+
+		return OpentreeRepresentationConverter.convert(result);
+	}
+	
+	/**
+	 * @param nodeId
+	 * @return
+	 * @throws NoSuchTreeException 
+	 */
+	@Description( "Discard the working copy that this node is the root of" )
+	@PluginTarget( Node.class )
+	public Representation discardWorkingCopy(@Source Node root) throws NoSuchTreeException {
+
+		DatabaseManager manager = new DatabaseManager(root.getGraphDatabase());
+
+		// TODO: add check for whether the provided node is the root node of a tree. If not then return this information
+
+		Transaction tx = root.getGraphDatabase().beginTx();
+		Node originalRoot = null;
+		try {
+			originalRoot  = manager.discardWorkingCopy(root);
+			tx.success();
+		} finally {
+			tx.finish();
+		}
+		
+		Map<String, Object> result = new HashMap<String, Object>();
+		if (originalRoot  == null) {
+			result.put("event", "failure");
+			result.put("message", "could not save working copy");
+		} else {
+			result.put("event", "success");
+			result.put("restored_original_root_node_id", originalRoot.getId());
+		}
+
+		return OpentreeRepresentationConverter.convert(result);
+	}
+	
+	
+	/**
+	 * @param nodeId
+	 * @return
 	 */
 	@Description( "Remove a previously imported tree from the graph" )
 	@PluginTarget( GraphDatabaseService.class )

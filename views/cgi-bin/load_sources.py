@@ -8,6 +8,8 @@ print the result to the web browser.
 """
 
 import otu
+from time import time
+import math
 import json
 import urllib2
 import cgi,cgitb
@@ -24,7 +26,7 @@ except ImportError:
 
 ##################### page definition. to make new pages, see the otu.PAGES dict
 
-current = "LOAD"
+current = "SEARCH_AND_IMPORT"
 HTML = otu.get_html(current)
 
 #####################
@@ -58,15 +60,20 @@ def process_incoming_form (form, form_field, upload_dir):
     if (len(form.keys()) < 1):
         result["event"] = NO_ACTION
 
-    elif form.has_key("hidden_newick_from_file"):
-        result = save_uploaded_file_newick(form, form_field,upload_dir)
-
     elif form.has_key("hidden_nexson_from_git"):
         result = save_git_file_nexson(form, upload_dir)
 
-    elif form.has_key("hidden_nexson_from_file"):
-        result = save_uploaded_file_nexson(form, form_field,upload_dir)
+    elif form.has_key("local_file_type"):
 
+        filetype = form["local_file_type"].value
+        
+        if filetype == "nexson":
+            result = save_uploaded_file_nexson(form, form_field,upload_dir)
+        elif filetype == "newick":
+            result = save_uploaded_file_newick(form, form_field,upload_dir)
+        elif filetype == "nexus":
+            result = save_uploaded_file_nexus(form, form_field,upload_dir)            
+            
     elif form.has_key("deleted_source_id"):
         result["event"] = SUCCESS
         result["message"] = "Source " + form["deleted_source_id"].value + " was removed from the database."
@@ -88,7 +95,8 @@ def save_uploaded_file_newick (form, form_field, upload_dir):
        this does nothing.
     """
     if not form.has_key(form_field): return False
-    sourceid = form["sourceId"].value
+#    sourceid = form["sourceId"].value
+    sourceid = str(int(math.floor(time())))
     fileitem = form[form_field]
     if not fileitem.file: return False
     fout = file (os.path.join(upload_dir, fileitem.filename), 'wb')
@@ -112,6 +120,13 @@ def save_uploaded_file_newick (form, form_field, upload_dir):
     f = urllib2.urlopen(req)
     log.close()
     return {"event": ADDED, "sourceId": sourceid}
+
+def save_uploaded_file_nexson (form, form_field, upload_dir):
+    return {"event": WARNING, "message": "Manual nexson upload not (yet) supported."}
+
+def save_uploaded_file_nexus (form, form_field, upload_dir):
+    return {"event": WARNING, "message": "Manual nexus upload not (yet) supported."}
+
 
 def save_git_file_nexson(form, upload_dir):
     log = open("logging","a")
@@ -137,9 +152,6 @@ def save_git_file_nexson(form, upload_dir):
     result = json.loads(f.read())
 #    result["sourceId"] = sourceId
     return result
-
-def save_uploaded_file_nexson (form, form_field, upload_dir):
-    return {"event": WARNING, "message": "Manual nexson upload not (yet) implemented."}
 
 def make_json_with_newick(sourcename, newick):
     data = json.dumps({"sourceId": sourcename, "newickString": newick})

@@ -2,7 +2,9 @@ package opentree.otu;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -36,6 +38,9 @@ public class DatabaseManager extends DatabaseAbstractBase {
 	
 	private HashSet<String> knownRemotes;
 	private Node lastObservedIngroupStartNode = null;
+	
+	// used when copying trees to remember a specified node from the old tree that is in the new one
+	Node workingCopyNodeOfInterest = null;
 	
 	protected Index<Node> sourceMetaNodesBySourceId = getNodeIndex(NodeIndexDescription.SOURCE_METADATA_NODES_BY_SOURCE_ID);
 	protected Index<Node> treeRootNodesByTreeId = getNodeIndex(NodeIndexDescription.TREE_ROOT_NODES_BY_TREE_ID);
@@ -248,15 +253,11 @@ public class DatabaseManager extends DatabaseAbstractBase {
 		sourceMetaNode.createRelationshipTo(root, RelType.METADATAFOR);
 		root.setProperty(NodeProperty.LOCATION.name, location);
 		root.setProperty(NodeProperty.SOURCE_ID.name, sourceId);
-		
-		// designate the root as the ingroup this is specified in the tree properties (e.g. from a nexson)
-//		if (tree.getRoot().getObject(NodeProperty.IS_INGROUP.name) != null) {
-//			designateIngroup(root);
-//		}
 
 		// add node properties
 		root.setProperty(NodeProperty.TREE_ID.name, treeId);
 		root.setProperty(NodeProperty.IS_ROOT.name, true);
+		root.setProperty(NodeProperty.IS_SAVED_COPY.name, true);
 		setNodePropertiesFromMap(root, tree.getAssoc());
 
 		collectTipTaxonArrayProperties(root, tree);
@@ -264,6 +265,113 @@ public class DatabaseManager extends DatabaseAbstractBase {
 		indexer.addTreeRootNodeToIndexes(root);
 		
 		return root;
+	}
+	
+	/**
+	 * Make a working copy of a local tree.
+	 * 
+	 * @param original
+	 * 		The root node of the tree to be copied
+	 * @return workingRootNode
+	 * 		The root node of the working copy of the tree
+	 */
+	public Map<String, Object> makeWorkingCopyOfTree(Node original, Long nodeIdOfInterest) {
+		
+		Node working = graphDb.createNode();
+		
+		// connect the working root to the original root
+		working.createRelationshipTo(original, RelType.WORKINGCOPYOF);
+		working.setProperty(NodeProperty.IS_WORKING_COPY.name, true);
+		
+		// connect the working root to the source metadata node
+		Relationship originalSourceMetaRel = original.getSingleRelationship(RelType.METADATAFOR, Direction.INCOMING);
+		Node sourceMeta = originalSourceMetaRel.getStartNode();
+		sourceMeta.createRelationshipTo(working, RelType.METADATAFOR);
+
+		// copy the properties
+		DatabaseUtils.copyAllProperties(original, working);
+		working.removeProperty(NodeProperty.IS_SAVED_COPY.name);
+
+		// copy the tree itself
+		copyTreeRecursive(original, working, nodeIdOfInterest);
+
+		// update indexes
+		indexer.removeTreeRootNodeFromIndexes(original);
+		indexer.addTreeRootNodeToIndexes(working);
+
+		// disconnect the original root from the source metadata node
+		originalSourceMetaRel.delete();
+		
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put("working_root_node_id", working.getId());
+		
+		if (nodeIdOfInterest != null) {
+			if (workingCopyNodeOfInterest != null) {
+				result.put("node_of_interest_new_id", workingCopyNodeOfInterest.getId());
+			} else {
+				result.put("node_of_interest_new_id", "null");
+			}
+		}
+		
+		workingCopyNodeOfInterest = null;
+		
+		return result;
+		
+	}
+	
+	/**
+	 * Throw away a working tree and restore the original copy
+	 * 
+	 * @param working
+	 * 		The root node of the working tree
+	 * @return
+	 * 		The root node of the original tree
+	 */
+	public Node discardWorkingCopy(Node working) {
+		
+		// get the source meta node
+		Relationship workingSourceMetaRel = working.getSingleRelationship(RelType.METADATAFOR, Direction.INCOMING);
+		Node sourceMeta = workingSourceMetaRel.getStartNode();
+		
+		// reattach original root to the source meta and add it back to the indexes
+		Node original = working.getSingleRelationship(RelType.WORKINGCOPYOF, Direction.OUTGOING).getEndNode();
+		sourceMeta.createRelationshipTo(original, RelType.METADATAFOR);
+		indexer.addTreeRootNodeToIndexes(original);
+		
+		// detach the working root from the original and the source meta
+		working.getSingleRelationship(RelType.METADATAFOR, Direction.INCOMING).delete();
+		working.getSingleRelationship(RelType.WORKINGCOPYOF, Direction.OUTGOING).delete();
+
+		// delete the working tree for good
+		indexer.removeTreeRootNodeFromIndexes(working);
+		deleteTree(working);
+
+		return original;
+	}
+
+	/**
+	 * Replace a saved (i.e. original) tree with its working copy, and mark the newly saved (previously working) copy as saved.
+	 * 
+	 * @param working
+	 * 		The root node of the working tree copy to be saved
+	 * @return
+	 * 		The root node of the newly saved tree (same node as was passed in)
+	 */
+	public Node saveWorkingCopy(Node working) {
+
+		// get the original root node
+		Relationship workingCopyRel = working.getSingleRelationship(RelType.WORKINGCOPYOF, Direction.OUTGOING);
+		Node original = workingCopyRel.getEndNode();
+		
+		// detach the original root from the working and delete the original tree
+		workingCopyRel.delete();
+		deleteTree(original);
+		
+		// reassign working copy to saved copy
+		working.removeProperty(NodeProperty.IS_WORKING_COPY.name);
+		working.setProperty(NodeProperty.IS_SAVED_COPY.name, true);
+
+		return working;
 	}
 	
 	// ===== delete methods
@@ -296,8 +404,8 @@ public class DatabaseManager extends DatabaseAbstractBase {
 				nd.delete();
 			}
 			
-			// delete the tree root
-			treeRootNodesByTreeId.remove(root);
+			// remove the tree root from the last index // i am pretty sure this is redundant...
+//			treeRootNodesByTreeId.remove(root);
 			
 			tx.success();
 
@@ -392,24 +500,26 @@ public class DatabaseManager extends DatabaseAbstractBase {
 	 */
 	public Node rerootTree(Node newroot) {
 		
-		// first get the root of the old tree
+		// first get the current root node for this tree
 		Node oldRoot = DatabaseUtils.getRootOfTreeContaining(newroot);
-		
+
+		Transaction tx = graphDb.beginTx(); // TODO: should remove transactions from here. Calling classes/methods should implement these instead
+
 		// not rerooting
 		if (oldRoot == newroot) {
-			Transaction tx1 = graphDb.beginTx();
 			try {
 				oldRoot.setProperty(NodeProperty.ROOTING_IS_SET.name, true);
-				tx1.success();
+				tx.success();
 			} finally {
-				tx1.finish();
+				tx.finish();
 			}
 			return oldRoot;
 		}
+		
 		Node actualRoot = null;
 		String treeID = null;
 		treeID = (String) oldRoot.getProperty(NodeProperty.TREE_ID.name);
-		Transaction tx = graphDb.beginTx();
+//		Transaction tx = graphDb.beginTx();
 		try {
 			// tritomy the root
 			int oldrootchildcount = DatabaseUtils.getNumberOfRelationships(oldRoot, RelType.CHILDOF, Direction.INCOMING);
@@ -425,7 +535,7 @@ public class DatabaseManager extends DatabaseAbstractBase {
 			
 			// process the reroot
 			actualRoot = graphDb.createNode();
-
+			
 			Relationship nrprel = newroot.getSingleRelationship(RelType.CHILDOF, Direction.OUTGOING);
 			Node tempParent = nrprel.getEndNode();
 			actualRoot.createRelationshipTo(tempParent, RelType.CHILDOF);
@@ -442,6 +552,11 @@ public class DatabaseManager extends DatabaseAbstractBase {
 
 			metadata.createRelationshipTo(actualRoot, RelType.METADATAFOR);
 			
+			// disconnect the current root from the saved copy of this tree
+			Relationship workingCopyRel = oldRoot.getSingleRelationship(RelType.WORKINGCOPYOF, Direction.OUTGOING);
+			Node rootNodeOfOriginalCopy = workingCopyRel.getEndNode();
+			workingCopyRel.delete();
+			
 			// clean up properties
 			DatabaseUtils.exchangeAllProperties(oldRoot, actualRoot); // TODO: are there properties we don't want to exchange?
 			
@@ -457,6 +572,9 @@ public class DatabaseManager extends DatabaseAbstractBase {
 				child.removeProperty(NodeProperty.IS_INGROUP_ROOT.name);
 			}
 
+			// reattach to the saved copy
+			actualRoot.createRelationshipTo(rootNodeOfOriginalCopy, RelType.WORKINGCOPYOF);
+			
 			tx.success();
 		} finally {
 			tx.finish();
@@ -497,6 +615,44 @@ public class DatabaseManager extends DatabaseAbstractBase {
 	}
 	
 	// ========== private methods
+	
+	/**
+	 * A recursive function to facilitate copying trees
+	 * 
+	 * @param original
+	 * @param copy
+	 */
+	private void copyTreeRecursive(Node original, Node copy, Long nodeIdOfInterest) {
+		
+		// if this node is one we want to remember, then do that
+		if (nodeIdOfInterest != null) {
+			if (original.getId() == nodeIdOfInterest) {
+				workingCopyNodeOfInterest = copy;
+			}
+		}
+		
+		Map<Node, Node> childrenToCopy = new HashMap<Node, Node>();
+		
+		for (Relationship originalChildRel : original.getRelationships(Direction.INCOMING, RelType.CHILDOF)) {
+			
+			// make a new copy of this child node and attach it to the copy of the parent
+			Node copiedChild = graphDb.createNode();
+			Relationship copiedChildRel = copiedChild.createRelationshipTo(copy, RelType.CHILDOF);
+
+			// remember this child so we can copy its children
+			Node originalChild = originalChildRel.getStartNode();
+			childrenToCopy.put(originalChild, copiedChild);
+
+			// copy all properties
+			DatabaseUtils.copyAllProperties(originalChild, copiedChild);
+			DatabaseUtils.copyAllProperties(originalChildRel, copiedChildRel);
+		}
+		
+		// recur on the children
+		for (Entry<Node, Node> nodePairToCopy : childrenToCopy.entrySet()) {
+			copyTreeRecursive(nodePairToCopy.getKey(), nodePairToCopy.getValue(), nodeIdOfInterest);
+		}
+	}
 	
 	/**
 	 * Add a known remote to the graph property for known remotes, which is a primitive string array. We

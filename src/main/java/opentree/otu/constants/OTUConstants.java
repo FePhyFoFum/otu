@@ -46,6 +46,8 @@ public enum OTUConstants {
 		NodeProperty.OT_ORIGINAL_LABEL,
 		NodeProperty.OT_OTT_ID,
 		NodeProperty.OT_OTT_TAXON_NAME,
+		NodeProperty.IS_SAVED_COPY,
+		NodeProperty.IS_WORKING_COPY
 	};
 	
 	public static final SearchableProperty[] TREE_PROPERTIES_FOR_SIMPLE_INDEXING = {

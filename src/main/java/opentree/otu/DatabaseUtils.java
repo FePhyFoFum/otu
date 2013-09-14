@@ -186,6 +186,30 @@ public class DatabaseUtils {
 			exchangeNodeProperty(n1, n2, p);
 		}
 	}
+	
+	/**
+	 * Copies all properties of one node to the other. Does not replace properties on the target that are not set on the original node.
+	 * node and set on the other.
+	 * @param original
+	 * @param target
+	 */
+	public static void copyAllProperties(Node original, Node target) {
+		for (String p : original.getPropertyKeys()) {
+			target.setProperty((p), original.getProperty(p));
+		}
+	}
+	
+	/**
+	 * Copies all properties of one relationship to the other. Does not replace properties on the target that are not set on the original node.
+	 * node and set on the other.
+	 * @param original
+	 * @param target
+	 */
+	public static void copyAllProperties(Relationship original, Relationship target) {
+		for (String p : original.getPropertyKeys()) {
+			target.setProperty((p), original.getProperty(p));
+		}
+	}
 
 	/**
 	 * Switches the value of the specified property between two nodes. If only one node has the property, it will be

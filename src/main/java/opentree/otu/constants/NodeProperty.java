@@ -115,6 +115,16 @@ public enum NodeProperty {
 	IS_WITHIN_INGROUP ("within_ingroup", boolean.class),
 	
 	/**
+	 * A boolean indicating that this tree is a working copy, thus will not be compared to copies of this tree on the remote repo.
+	 */
+	IS_WORKING_COPY ("is_working_copy", boolean.class),
+	
+	/**
+	 * A boolean indicating that this tree is a saved copy, thus will be compared to copies of this tree on the remote repo.
+	 */
+	IS_SAVED_COPY ("is_saved_copy", boolean.class),
+	
+	/**
 	 * Whether or not this tree contains otu nodes that have been mapped to OTT taxa. Used for user feedback during TNRS.
 	 */
 	PROCESSED_BY_TNRS ("processed_by_tnrs", boolean.class),

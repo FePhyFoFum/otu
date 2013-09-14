@@ -23,5 +23,10 @@ public enum RelType implements RelationshipType {
 	 * Associates TNRS matches with graph nodes. Used when TNRS returns
 	 * multiple results that will require user-disambiguation.
 	 */
-	TNRSMATCHFOR;
+	TNRSMATCHFOR,
+	
+	/**
+	 * Associates the root node of a working copy of an imported tree with the original copy.
+	 */
+	WORKINGCOPYOF;
 }
