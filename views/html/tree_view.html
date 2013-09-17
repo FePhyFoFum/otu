@@ -699,11 +699,8 @@ function submitTaxonAssignForm() {
     var ottId = $("#assignTaxonForm input[name='ottId']").val();
     var ottName = $("#assignTaxonForm input[name='ottTaxonName']").val();
     
-    var data = JSON.stringify( {
-        "keys": ["ot:ottolid", "ot:ottTaxonName", "name"],
-        "values": [ottId, ottName, ottName],
-        "types": ["integer", "string", "string"]
-    });
+    var data = JSON.stringify({"ottId": ottId, "taxonName": ottName});
+
     
     assignTaxon(nodeId, data);
 }
@@ -720,13 +717,9 @@ function submitAltMatchAssignment(matchEntry) {
     var ottId = matchEntry.matched_ott_id;
     var ottName = matchEntry.matched_name;
     
-    var data = JSON.stringify( {
-        "keys": ["ot:ottolid", "ot:ottTaxonName", "name"],
-        "values": [ottId, ottName, ottName],
-        "types": ["integer", "string", "string"]
-    });
-    
-//    alert(data);
+    var data = JSON.stringify({"ottId": ottId, "taxonName": ottName});
+        
+    //    alert(data);
     assignTaxon(nodeId, data);
     
 }
@@ -738,14 +731,14 @@ function submitAltMatchAssignment(matchEntry) {
 
 function assignTaxon(nodeId, data) {
     
-//    var assignTaxonService = "http://localhost:7474/db/data/ext/sourceJsons/node/" + nodeId + "/setBasicProperties";
+    if (!isWorkingCopy) { makeWorkingCopy(nodeId, assignTaxon, data); return false; }
+    
     var assignTaxonService = "http://localhost:7474/db/data/ext/sourceJsons/node/" + nodeId + "/assignTaxon";
     var xhr = getXhr(assignTaxonService, function() {
         
         var response = JSON.parse(xhr.responseText);
         if (response.event == "success") {
             $("#nodeEditor").remove();
-//            setupTree(rootNodeId);
             setupTree(rootNodeId);
         } else {
             alert(response.message);
@@ -898,7 +891,7 @@ function reroot(nodeId){
     xhr.send(JSON.stringify({"nodeId": nodeId}));
 }
 
-function makeWorkingCopy(nodeIdOfInterest, callback) {
+function makeWorkingCopy(nodeIdOfInterest, callback, data) {
     
     if (isWorkingCopy) {
         alert("attempt to create a working copy when this already is one");
@@ -924,7 +917,7 @@ function makeWorkingCopy(nodeIdOfInterest, callback) {
 //            setupTree(newRootId);
 
             if(callback) {
-                callback(response.node_of_interest_new_id);
+                callback(response.node_of_interest_new_id, data);
             }
             
             isWorkingCopy = true;

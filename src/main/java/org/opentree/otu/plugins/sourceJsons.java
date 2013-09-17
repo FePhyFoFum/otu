@@ -37,6 +37,7 @@ import org.opentree.otu.OTUDatabaseUtils;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.DuplicateSourceException;
+import org.opentree.properties.OTVocabulary;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -228,6 +229,52 @@ public class sourceJsons extends ServerPlugin {
 		
 		DatabaseManager manager = new DatabaseManager(node.getGraphDatabase());
 		manager.setProperties(node, keys, values, types);
+		
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put("event", "success");
+		return OTRepresentationConverter.convert(result);
+	}
+	
+	/**
+	 * Assign a taxon to the node.
+	 * 
+	 * @param nodeid
+	 * @return
+	 */
+	@Description("Set the properties as specified")
+	@PluginTarget(Node.class)
+	public Representation assignTaxon(@Source Node node,
+			@Description("The ott id of the taxon to be set") @Parameter(name="ottId", optional=false) Long ottId,
+			@Description("The name of the ott taxon corresponding to this ott id") @Parameter(name="taxonName", optional=false) String taxonName) {
+		
+		DatabaseManager manager = new DatabaseManager(node.getGraphDatabase());
+/*		String[] keys = {OTVocabulary.OT_OTT_ID.propertyName(), OTVocabulary.OT_OTT_TAXON_NAME.propertyName(), OTUNodeProperty.NAME.propertyName()};
+		String[] values = {ottId.toString(), taxonName, taxonName};
+		String[] types = {"integer", "string", "string"}; */
+		
+		Map<String, Object> properties = new HashMap<String, Object>();
+		properties.put(OTVocabulary.OT_OTT_ID.propertyName(), ottId);
+		properties.put(OTVocabulary.OT_OTT_TAXON_NAME.propertyName(), taxonName);
+		properties.put(OTUNodeProperty.NAME.propertyName(), taxonName);
+		
+		manager.setProperties(node, properties);
+
+		// remove any existing tnrs matches
+		Transaction tx = node.getGraphDatabase().beginTx();
+		try {
+			for (Node match : Traversal.description().relationships(OTURelType.TNRSMATCHFOR, Direction.INCOMING).traverse(node).nodes()) {
+				if (match !=  node) {
+					for (Relationship rel : match.getRelationships()) {
+						rel.delete();
+					}
+					match.delete();
+				}
+			}
+			tx.success();
+		} finally {
+			tx.finish();
+		}
+		
 		
 		Map<String, Object> result = new HashMap<String, Object>();
 		result.put("event", "success");

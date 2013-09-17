@@ -15,6 +15,12 @@ public enum OTUNodeProperty implements OTProperty {
 	
 	// TODO: switch as many of these as possible over to the nexson and ot: vocabulary properties as possible. waiting for that spec to stabilize to do so
 
+	// ===== source meta nodes
+	
+	/**
+	 * A boolean to identify source metadata nodes.
+	 */
+	IS_SOURCE_META ("is_source_meta", boolean.class),
 	
 	// ===== source meta and tree root nodes
 
@@ -150,8 +156,12 @@ public enum OTUNodeProperty implements OTProperty {
 	 * only be set on nodes that are actually part of the ingroup, implying that nodes without this property in trees that
 	 * have their ingroup set are thus part of the outgroup.
 	 */
-	IS_WITHIN_INGROUP ("within_ingroup", boolean.class);
+	IS_WITHIN_INGROUP ("within_ingroup", boolean.class),
 	
+	/**
+	 * A property of OTU nodes only. For OTU nodes, this should be set to true. Any other node should never have this property.
+	 */
+	IS_OTU ("is_otu", boolean.class);
 	
 	private final String propertyName;
 	private final Class<?> type;

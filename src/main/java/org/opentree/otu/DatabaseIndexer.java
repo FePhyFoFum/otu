@@ -118,12 +118,12 @@ public class DatabaseIndexer extends OTUDatabase {
 		addStringArrayEntriesToIndex(root,
 				treeRootNodesByMappedTaxonName,
 				OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES.propertyName(),
-				OTUNodeProperty.NAME.propertyName());
+				OTVocabulary.OT_OTT_TAXON_NAME.propertyName());
 		
 		addStringArrayEntriesToIndex(root,
 				treeRootNodesByMappedTaxonNameNoSpaces,
 				OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES_WHITESPACE_FILLED.propertyName(),
-				OTUNodeProperty.NAME.propertyName());
+				OTVocabulary.OT_OTT_TAXON_NAME.propertyName());
 		
 		addLongArrayEntriesToIndex(root,
 				treeRootNodesByMappedTaxonOTTId,

@@ -239,7 +239,7 @@ public class DatabaseBrowser extends OTUDatabase {
 		HashSet<Node> descendantTips = new HashSet<Node>();
 		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(OTURelType.CHILDOF, Direction.INCOMING);
 		for (Node curGraphNode: CHILDOF_TRAVERSAL.breadthFirst().traverse(ancestor).nodes()) {
-			if (curGraphNode.hasProperty("oty")) { // what is this? should this be "otu"?
+			if (curGraphNode.hasProperty(OTUNodeProperty.IS_OTU.propertyName())) { // what is this? should this be "otu"?
 				descendantTips.add(curGraphNode);
 			}
 		}
@@ -385,6 +385,32 @@ public class DatabaseBrowser extends OTUDatabase {
 		result.put("metadata", metadata);
 		
 		return result;
+	}
+	
+	/**
+	 * Return the root node from the graph for the tree containing the specified node.
+	 * @param node
+	 * 		The node to start traversing from
+	 * @return
+	 */
+	public static Node getRootOfTreeContaining(Node node) {
+
+		Node root = node;
+		boolean going = true;
+		while (going) {
+			if (root.hasRelationship(OTURelType.CHILDOF, Direction.OUTGOING)) {
+				root = root.getSingleRelationship(OTURelType.CHILDOF, Direction.OUTGOING).getEndNode();
+			} else {
+				break;
+			}
+		}
+		
+		// only return the node if it is actually the root of a tree in the graph
+		if (root.hasProperty(OTUNodeProperty.IS_ROOT.propertyName())) {
+			return root;
+		} else {
+			return null;
+		}
 	}
 	
 	/**

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -13,8 +12,6 @@ import jade.tree.JadeNode;
 import jade.tree.JadeTree;
 
 import org.opentree.GeneralUtils;
-import org.opentree.constants.BasicType;
-import org.opentree.graphdb.DatabaseAbstractBase;
 import org.opentree.graphdb.DatabaseUtils;
 import org.opentree.graphdb.GraphDatabaseAgent;
 import org.opentree.nexson.io.NexsonSource;
@@ -24,6 +21,7 @@ import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.DuplicateSourceException;
 import org.opentree.otu.exceptions.NoSuchTreeException;
+import org.opentree.properties.BasicType;
 import org.opentree.properties.OTVocabulary;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -45,6 +43,12 @@ public class DatabaseManager extends OTUDatabase {
 	
 	// used when copying trees to remember a specified node from the old tree that is in the new one
 	Node workingCopyNodeOfInterest = null;
+
+	// used when storing taxon information to use when for indexing tree root nodes
+	List<String> originalTaxonNames;
+	List<String> mappedTaxonNames;
+	List<String> mappedTaxonNamesNoSpaces;
+	List<Long> mappedOTTIds;
 	
 	protected Index<Node> sourceMetaNodesBySourceId = getNodeIndex(OTUNodeIndex.SOURCE_METADATA_NODES_BY_SOURCE_ID);
 	protected Index<Node> treeRootNodesByTreeId = getNodeIndex(OTUNodeIndex.TREE_ROOT_NODES_BY_TREE_ID);
@@ -156,6 +160,7 @@ public class DatabaseManager extends OTUDatabase {
 			sourceMeta = graphDb.createNode();
 			sourceMeta.setProperty(OTUNodeProperty.LOCATION.propertyName(), location);
 			sourceMeta.setProperty(OTUNodeProperty.SOURCE_ID.propertyName(), sourceId);
+			sourceMeta.setProperty(OTUNodeProperty.IS_SOURCE_META.propertyName(), true);
 			
 			// set source properties
 			setNodePropertiesFromMap(sourceMeta, source.getProperties());
@@ -243,7 +248,12 @@ public class DatabaseManager extends OTUDatabase {
 		// add the tree to the graph; only add tree structure if this is a local tree
 		Node root = null;
 		if (location.equals(LOCAL_LOCATION)) {
+
 			root = preorderAddTreeToDB(tree.getRoot(), null);
+			
+			// set this property now so that get root traversals will work
+			root.setProperty(OTUNodeProperty.IS_ROOT.propertyName(), true);			
+
 			// designate the ingroup if we found one, and then reset the variable!
 			if (lastObservedIngroupStartNode != null) {
 				designateIngroup(lastObservedIngroupStartNode);
@@ -260,12 +270,24 @@ public class DatabaseManager extends OTUDatabase {
 
 		// add node properties
 		root.setProperty(OTUNodeProperty.TREE_ID.propertyName(), treeId);
-		root.setProperty(OTUNodeProperty.IS_ROOT.propertyName(), true);
 		root.setProperty(OTUNodeProperty.IS_SAVED_COPY.propertyName(), true);
 		setNodePropertiesFromMap(root, tree.getAssoc());
 
-		collectTipTaxonArrayProperties(root, tree);
+		// populates several lists with taxon information, which we reference below
+		collectTipTaxonArrayPropertiesFromJadeTree(root, tree);
 
+		// store the properties we just collected
+		root.setProperty(OTUNodeProperty.DESCENDANT_ORIGINAL_TAXON_NAMES.propertyName(), GeneralUtils.convertToStringArray(originalTaxonNames));
+		root.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES.propertyName(), GeneralUtils.convertToStringArray(mappedTaxonNames));
+		root.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES_WHITESPACE_FILLED.propertyName(), GeneralUtils.convertToStringArray(mappedTaxonNamesNoSpaces));
+		root.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_OTT_IDS.propertyName(), GeneralUtils.convertToLongArray(mappedOTTIds));
+		
+		// clean up the mess... just to be sure we don't accidentally use this information somewhere else
+		originalTaxonNames = null;
+		mappedTaxonNames = null;
+		mappedTaxonNamesNoSpaces = null;
+		mappedOTTIds = null;
+		
 		indexer.addTreeRootNodeToIndexes(root);
 		
 		return root;
@@ -454,7 +476,31 @@ public class DatabaseManager extends OTUDatabase {
 	// ===== other methods
 	
 	/**
-	 * Set properties on a node according to the passed in maps
+	 * Set properties on a node according to the passed in map. Uses the existing object types for the values.
+	 * @param node
+	 * @param keys
+	 * @param values
+	 */
+	public void setProperties(Node node, Map<String, Object> properties) {
+
+		Transaction tx = graphDb.beginTx();
+		try {
+			for (Entry<String, Object> property : properties.entrySet()) {
+				node.setProperty(property.getKey(), property.getValue());
+			}
+			updateIndexes(node);
+			tx.success();
+		} finally {
+			tx.finish();
+		}
+		
+	}
+	
+	/**
+	 * Set properties on a node according to the passed in arrays. Should convert the object types according to the BasicType names indicated in `types`.
+	 * 
+	 * TODO: I think there is a bug in here...
+	 * 
 	 * @param keys
 	 * @param values
 	 * @param types
@@ -477,12 +523,48 @@ public class DatabaseManager extends OTUDatabase {
 
 				node.setProperty(key, t.convertToValue(values[i++]));
 			}
+			
+			updateIndexes(node);
+			
 			tx.success();
 		} catch (ArrayIndexOutOfBoundsException ex) {
 			tx.failure();
 			throw new IllegalArgumentException("All the input arrays must be the same length.");
 		} finally {
 			tx.finish();
+		}
+	}
+	
+	/**
+	 * Update the indexes for a given node.
+	 * @param node
+	 */
+	public void updateIndexes(Node node) {
+		Node root = DatabaseBrowser.getRootOfTreeContaining(node);
+		if (root != null) {
+			// if this is a tree root node
+			collectTipTaxonArrayPropertiesFromGraph(root);
+			
+			// store the properties we just collected
+			root.setProperty(OTUNodeProperty.DESCENDANT_ORIGINAL_TAXON_NAMES.propertyName(), GeneralUtils.convertToStringArray(originalTaxonNames));
+			root.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES.propertyName(), GeneralUtils.convertToStringArray(mappedTaxonNames));
+			root.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES_WHITESPACE_FILLED.propertyName(), GeneralUtils.convertToStringArray(mappedTaxonNamesNoSpaces));
+			root.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_OTT_IDS.propertyName(), GeneralUtils.convertToLongArray(mappedOTTIds));
+			
+			// clean up the mess... just to be sure we don't accidentally use this information somewhere else
+			originalTaxonNames = null;
+			mappedTaxonNames = null;
+			mappedTaxonNamesNoSpaces = null;
+			mappedOTTIds = null;
+			
+			indexer.removeTreeRootNodeFromIndexes(root);
+			indexer.addTreeRootNodeToIndexes(root);
+		} else {
+			if (node.hasProperty(OTUNodeProperty.IS_SOURCE_META.propertyName())) {
+				// if this is a source meta node
+				indexer.removeSourceMetaNodeFromIndexes(node);
+				indexer.addSourceMetaNodeToIndexes(node);
+			}
 		}
 	}
 	
@@ -494,7 +576,7 @@ public class DatabaseManager extends OTUDatabase {
 	public Node rerootTree(Node newroot) {
 		
 		// first get the current root node for this tree
-		Node oldRoot = OTUDatabaseUtils.getRootOfTreeContaining(newroot);
+		Node oldRoot = DatabaseBrowser.getRootOfTreeContaining(newroot);
 
 		Transaction tx = graphDb.beginTx(); // TODO: should remove transactions from here. Calling classes/methods should implement these instead
 
@@ -583,7 +665,7 @@ public class DatabaseManager extends OTUDatabase {
 	public void designateIngroup(Node innode) {
 
 		// first get the root of the old tree
-		Node root = OTUDatabaseUtils.getRootOfTreeContaining(innode);
+		Node root = DatabaseBrowser.getRootOfTreeContaining(innode);
 
 		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(OTURelType.CHILDOF, Direction.INCOMING);
 		Transaction tx = graphDb.beginTx();
@@ -718,6 +800,11 @@ public class DatabaseManager extends OTUDatabase {
 		for (JadeNode childJadeNode : curJadeNode.getChildren()) {
 			preorderAddTreeToDB(childJadeNode, curGraphNode);
 		}
+		
+		// mark the tips as OTU nodes
+		if (curJadeNode.getChildCount() < 1) {
+			curGraphNode.setProperty(OTUNodeProperty.IS_OTU.propertyName(), true);
+		}
 
 		return curGraphNode;
 	}
@@ -739,36 +826,63 @@ public class DatabaseManager extends OTUDatabase {
 	 * @param node
 	 * @param tree
 	 */
-	private void collectTipTaxonArrayProperties(Node node, JadeTree tree) {
+	private void collectTipTaxonArrayPropertiesFromJadeTree(Node node, JadeTree tree) {
 		
-		List<String> originalTaxonNames = new ArrayList<String>();
-		List<String> mappedTaxonNames = new ArrayList<String>();
-		List<String> mappedTaxonNamesNoSpaces = new ArrayList<String>();
-		List<Long> mappedOTTIds = new ArrayList<Long>();
+		originalTaxonNames = new ArrayList<String>();
+		mappedTaxonNames = new ArrayList<String>();
+		mappedTaxonNamesNoSpaces = new ArrayList<String>();
+		mappedOTTIds = new ArrayList<Long>();
 
 		for (JadeNode treeNode : tree.getRoot().getDescendantLeaves()) {
 
 			originalTaxonNames.add((String) treeNode.getObject(OTVocabulary.OT_ORIGINAL_LABEL.propertyName()));
 
-			String name = treeNode.getName(); // TODO: make sure we aren't setting these to original taxon names.
-			// If the node has not been explicitly mapped, then this should be null.
-
-			mappedTaxonNames.add(name);
-			mappedTaxonNamesNoSpaces.add(name.replace("\\s+", OTUConstants.WHITESPACE_SUBSTITUTE_FOR_SEARCH /*.value*/));
+			if (treeNode.hasAssocObject(OTVocabulary.OT_OTT_ID.propertyName())) {
+				// If the node has not been explicitly mapped, we will not record the name as a mapped name
+				String name = treeNode.getName();
+				mappedTaxonNames.add(name);
+				mappedTaxonNamesNoSpaces.add(name.replace("\\s+", OTUConstants.WHITESPACE_SUBSTITUTE_FOR_SEARCH));
+			}
 
 			Long ottId = (Long) treeNode.getObject(OTVocabulary.OT_OTT_ID.propertyName());
 			if (ottId != null) {
 				mappedOTTIds.add(ottId);
 			}
 		}
+	}
+	
+	/**
+	 * Collects taxonomic names and ids for all the tips of the provided JadeTree and stores this info as node properties
+	 * of the provided graph node. Used to store taxonomic mapping info for the root nodes of trees in the graph.
+	 * @param node
+	 * @param tree
+	 */
+	private void collectTipTaxonArrayPropertiesFromGraph(Node node) {
+		
+		originalTaxonNames = new ArrayList<String>();
+		mappedTaxonNames = new ArrayList<String>();
+		mappedTaxonNamesNoSpaces = new ArrayList<String>();
+		mappedOTTIds = new ArrayList<Long>();
 
-		// store the properties in the nodes
-		node.setProperty(OTUNodeProperty.DESCENDANT_ORIGINAL_TAXON_NAMES.propertyName(), GeneralUtils.convertToStringArray(originalTaxonNames));
-		node.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES.propertyName(), GeneralUtils.convertToStringArray(mappedTaxonNames));
-		node.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES_WHITESPACE_FILLED.propertyName(), GeneralUtils.convertToStringArray(mappedTaxonNamesNoSpaces));
-		node.setProperty(OTUNodeProperty.DESCENDANT_MAPPED_TAXON_OTT_IDS.propertyName(), GeneralUtils.convertToLongArray(mappedOTTIds));
+		for (Node tip : DatabaseBrowser.getDescendantTips(node)) {
+
+			originalTaxonNames.add((String) tip.getProperty(OTVocabulary.OT_ORIGINAL_LABEL.propertyName()));
+
+			// only record explicit mapped names as mapped names
+			if (tip.hasProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName())) {
+				String name = (String) tip.getProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName());
+				mappedTaxonNames.add(name);
+				mappedTaxonNamesNoSpaces.add(name.replace("\\s+", OTUConstants.WHITESPACE_SUBSTITUTE_FOR_SEARCH));
+			}
+
+			if (tip.hasProperty(OTVocabulary.OT_OTT_ID.propertyName())) {
+				Long ottId = (Long) tip.getProperty(OTVocabulary.OT_OTT_ID.propertyName());
+				mappedOTTIds.add(ottId);
+			}
+		}
 	}
 
+	
 	/**
 	 * Used by the rerooting function
 	 * @param oldRoot

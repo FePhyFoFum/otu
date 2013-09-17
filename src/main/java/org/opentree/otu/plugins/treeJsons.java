@@ -361,9 +361,10 @@ public class treeJsons extends ServerPlugin{
 	        		JSONObject match = ((JSONObject) matches.get(0));
 	        		if ((Double) match.get("score") == 1.0) {
 	        			
-	        			otuNode.setProperty(OTVocabulary.OT_OTT_ID.propertyName(), match.get("matched_ott_id"));
+	        			otuNode.setProperty(OTVocabulary.OT_OTT_ID.propertyName(), Long.valueOf((String) match.get("matched_ott_id")));
 	        			otuNode.setProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName(),  match.get("matched_name"));
 	        		}
+	        		
 	        	} else {
 	        		
 	        		// create TNRS result nodes holding each match's info
@@ -394,7 +395,7 @@ public class treeJsons extends ServerPlugin{
         // return relevant info
         Map<String, Object> result = new HashMap<String, Object>();
         result.put("event", "success");
-        result.put("treeId", OTUDatabaseUtils.getRootOfTreeContaining(root).getProperty(OTUNodeProperty.TREE_ID.propertyName()));
+        result.put("treeId", DatabaseBrowser.getRootOfTreeContaining(root).getProperty(OTUNodeProperty.TREE_ID.propertyName()));
         result.put("rootNodeId", root.getId());
         result.put("unmatched_name_ids", response.get("unmatched_name_ids"));
         result.put("matched_name_ids", response.get("matched_name_ids"));

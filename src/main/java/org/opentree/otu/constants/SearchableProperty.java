@@ -54,11 +54,16 @@ public enum SearchableProperty {
     		OTVocabulary.OT_ORIGINAL_LABEL,
     		OTUNodeIndex.TREE_ROOT_NODES_BY_ORIGINAL_TAXON_NAME),
     		
-    DESCENDANT_MAPPED_TAXON_NAMES (
+/*    DESCENDANT_MAPPED_TAXON_NAMES (
     		"current taxon name (mapped?)",
     		OTUNodeProperty.NAME,
-    		OTUNodeIndex.TREE_ROOT_NODES_BY_MAPPED_TAXON_NAME),
+    		OTUNodeIndex.TREE_ROOT_NODES_BY_MAPPED_TAXON_NAME), */
 
+    DESCENDANT_MAPPED_TAXON_NAMES (
+    		"mapped ott taxon name",
+    		OTVocabulary.OT_OTT_TAXON_NAME,
+    		OTUNodeIndex.TREE_ROOT_NODES_BY_MAPPED_TAXON_NAME),
+    		
     DESCENDANT_MAPPED_TAXON_OTT_IDS (
     		"ott id",
     		OTVocabulary.OT_OTT_ID,

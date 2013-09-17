@@ -4,9 +4,9 @@ import java.io.File;
 import java.io.IOException;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.opentree.constants.BasicType;
 import org.opentree.graphdb.GraphDatabaseAgent;
 import org.opentree.otu.constants.OTUGraphProperty;
+import org.opentree.properties.BasicType;
 import org.opentree.properties.OTProperty;
 
 public class ConfigurationManager extends OTUDatabase {
