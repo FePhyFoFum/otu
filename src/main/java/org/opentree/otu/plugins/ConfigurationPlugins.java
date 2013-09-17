@@ -22,25 +22,67 @@ public class ConfigurationPlugins extends ServerPlugin {
 
 	@Description( "" )
 	@PluginTarget( GraphDatabaseService.class )
-	public String getNexsonGitDir(@Source GraphDatabaseService graphDb) {
-		DatabaseManager dm = new DatabaseManager(graphDb);
-		ConfigurationManager cm = new ConfigurationManager(dm);
-		String dir = cm.getNexsonGitDir();
-		String retstr = "{\"nexsongitdir\":\""+dir+"\"}";
-		return retstr;
-	}
+	public Representation getNexsonGitDir(@Source GraphDatabaseService graphDb) {
+		ConfigurationManager config = new ConfigurationManager(graphDb);
+		
+		String dir = config.getNexsonGitDir();
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put("nexsongitdir", dir ==  null ? "not specified" : dir);
 	
+		return OTRepresentationConverter.convert(result);
+	}
+		
 	@Description( "" )
 	@PluginTarget( GraphDatabaseService.class )
-	public boolean setNexsonGitDir(@Source GraphDatabaseService graphDb,
+	public Representation setNexsonGitDir(@Source GraphDatabaseService graphDb,
 			@Description( "Nexson Git Directory String")
 			@Parameter(name = "nexsongitdir", optional = false) String dir) {
-		DatabaseManager dm = new DatabaseManager(graphDb);
-		ConfigurationManager cm = new ConfigurationManager(dm);
-		boolean success = cm.setNexsonGitDir(dir);
-		return success;
+
+		ConfigurationManager config = new ConfigurationManager(graphDb);
+
+		boolean success = config.setNexsonGitDir(dir);
+
+		Map<String, Object> result = new HashMap<String, Object>();
+		if (success) {
+			result.put("event", "success");
+		} else {
+			result.put("event", "failure");
+		}
+		
+		return OTRepresentationConverter.convert(result);
 	}
 	
+	@Description("Get a property of the graph root node")
+	@PluginTarget( GraphDatabaseService.class )
+	public Representation getGraphProperty(@Source GraphDatabaseService graphDb,
+			@Description("The name of the graph property to retrieve") @Parameter(name="propertyName", optional=false) String propertyName) {
+		
+		ConfigurationManager config = new ConfigurationManager(graphDb);
+		Object value = config.getGraphProperty(propertyName);
+		
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put(propertyName, value);
+		return OTRepresentationConverter.convert(result);
+	}
+
+	@Description("Set a property of the graph root node")
+	@PluginTarget( GraphDatabaseService.class )
+	public Representation setGraphProperty(@Source GraphDatabaseService graphDb,
+			@Description("The name of the graph property to retrieve")
+				@Parameter(name="propertyName", optional=false) String propertyName,
+			@Description("The value to be set")
+				@Parameter(name="value", optional=false) String value,
+			@Description("The datatype of the value. This is case-insensitive and must be one of 'boolean', 'integer', 'decimal', or 'string'.")
+				@Parameter(name="type", optional=false) String type) {
+		
+		ConfigurationManager config = new ConfigurationManager(graphDb);
+		config.setGraphProperty(propertyName, value, type);
+		
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put("event", "success");
+		return OTRepresentationConverter.convert(result);
+	}
+
 	@Description( "Install the OTT taxonomy" )
 	@PluginTarget( GraphDatabaseService.class )
 	public Representation installOTT(@Source GraphDatabaseService graphDb,

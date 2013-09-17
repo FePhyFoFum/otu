@@ -475,18 +475,7 @@ public class DatabaseManager extends OTUDatabase {
 					throw new IllegalArgumentException("The type " + types[i] + " is not valid property type.");
 				}
 
-				if (t.type == Double.class) {
-					node.setProperty(key, Double.valueOf(values[i++]));
-
-				} else if (t.type == Integer.class) {
-					node.setProperty(key, Integer.valueOf(values[i++]));
-				
-				} else if (t.type == String.class) {
-					node.setProperty(key, String.valueOf(values[i++]));
-
-				} else if (t.type == Boolean.class) {
-					node.setProperty(key, Boolean.valueOf(values[i++]));
-				}
+				node.setProperty(key, t.convertToValue(values[i++]));
 			}
 			tx.success();
 		} catch (ArrayIndexOutOfBoundsException ex) {

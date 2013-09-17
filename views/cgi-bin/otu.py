@@ -31,8 +31,8 @@ PAGES = {
         "html" : "tree_view.html"},
     "PUSH_CHANGES" : {
         "title" : "Publish changes",
-        "link" : "conf.py",
-        "html" : "conf.html"},
+        "link" : "push_changes.py",
+        "html" : "push_changes.html"},
     "TAXONOMY" : {
         "title" : "Taxonomy",
         "link" : "taxonomy.py",

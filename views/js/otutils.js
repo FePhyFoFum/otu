@@ -27,3 +27,30 @@ function getQueryVariable(variable) {
     }
     return(false);
 }
+
+// Set a property of the graph root node. properties must be specified in the OTUGraphProperty enum.
+// An optional callback function can be specified, to which the JSON resulting from the service to set
+// the property will be passed.
+function setGraphProperty(pname, pvalue, ptype) {
+    var setPropertyService = "http://localhost:7474/db/data/ext/ConfigurationPlugins/graphdb/setGraphProperty";
+    var xhr = getXhr(setPropertyService, function() {
+        var response = JSON.parse(xhr.responseText);
+        if (callback) {
+            callback(response);
+        }
+    });
+    xhr.send(JSON.stringify({propertyName: pname, value: pvalue, type: ptype}));
+}
+
+// Get a property of the root node of the graph. an optional callback function
+// can be specified to which the JSON resulting from the property query will be passed
+function getGraphProperty(pname, callback) {
+    var getPropertyService = "http://localhost:7474/db/data/ext/ConfigurationPlugins/graphdb/getGraphProperty";
+    var xhr = getXhr(getPropertyService, function() {
+        var response=JSON.parse(xhr.responseText);
+        if (callback) {
+            callback(response);
+        }
+    });
+    xhr.send(JSON.stringify({propertyName: pname}));
+}

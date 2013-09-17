@@ -10,11 +10,14 @@
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
+} #buttonBar {
+    padding-right: 20em;
+
 } #deleteRecordButtons {
 
 } #loadFormContainer {
     position: absolute;
-    top: 6.7em;
+    top: 7.15em;
     right:3em;
     width: 22em;
     padding-right:0em;
@@ -505,8 +508,6 @@ function updateNodeEditor(node) {
         .attr("id","altMatchesContainer"));
     displayAlternativeMappings(node); // use ajax to populate the container
     
-//    alert(Object.keys(node));
-    
     var updateTimer;
     
     // assign different taxon form
@@ -737,7 +738,8 @@ function submitAltMatchAssignment(matchEntry) {
 
 function assignTaxon(nodeId, data) {
     
-    var assignTaxonService = "http://localhost:7474/db/data/ext/sourceJsons/node/" + nodeId + "/setBasicProperties";
+//    var assignTaxonService = "http://localhost:7474/db/data/ext/sourceJsons/node/" + nodeId + "/setBasicProperties";
+    var assignTaxonService = "http://localhost:7474/db/data/ext/sourceJsons/node/" + nodeId + "/assignTaxon";
     var xhr = getXhr(assignTaxonService, function() {
         
         var response = JSON.parse(xhr.responseText);
@@ -1027,6 +1029,7 @@ function resetEditRadio() {
 
 var treeId;
 var rootNodeId;
+var rootHasTNRSProperty;
 var sourceId;
 var xo; // the left side of the tree svg
 var yo; // the top of the tree svg
