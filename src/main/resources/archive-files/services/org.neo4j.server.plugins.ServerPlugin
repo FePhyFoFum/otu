@@ -1,4 +1,4 @@
-opentree.otu.plugins.sourceJsons
-opentree.otu.plugins.treeJsons
-opentree.otu.plugins.Indexing
-opentree.otu.plugins.ConfigurationPlugins
+org.opentree.otu.plugins.sourceJsons
+org.opentree.otu.plugins.treeJsons
+org.opentree.otu.plugins.Indexing
+org.opentree.otu.plugins.ConfigurationPlugins

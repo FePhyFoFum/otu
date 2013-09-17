@@ -10,6 +10,16 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.opentree</groupId>
+      <artifactId>ot-base</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opentree</groupId>
+      <artifactId>taxomachine</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
         <groupId>org.neo4j</groupId>
         <artifactId>neo4j</artifactId>
         <version>1.9.2</version>
@@ -36,42 +46,11 @@
       <version>4.8.1</version>
       <scope>test</scope>
     </dependency>
-	<dependency>
-		<groupId>commons-collections</groupId>
-		<artifactId>commons-collections</artifactId>
-		<version>3.0</version>
-	</dependency>
     <dependency>
     	<groupId>com.googlecode.json-simple</groupId>
     	<artifactId>json-simple</artifactId>
     	<version>1.1.1</version>
     </dependency>
-	<dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-client</artifactId>
-      <version>1.17.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>3.1</version>
-    </dependency>
-    <dependency>
-	  <groupId>net.sf.trove4j</groupId>
-	  <artifactId>trove4j</artifactId>
-	  <version>3.0.3</version>
-     </dependency>       
-    <!--dependency>
-    	<groupId>net.sf.json-lib</groupId>
-    	<artifactId>json-lib</artifactId>
-    	<version>2.4</version>
-    	<classifier>jdk15</classifier>
-    </dependency-->
-    <!--dependency>
-    	<groupId>commons-io</groupId>
-    	<artifactId>commons-io</artifactId>
-    	<version>1.3.2</version>
-    </dependency-->
   </dependencies>
    <build>
     <plugins>
@@ -79,11 +58,6 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-assembly-plugin</artifactId>
             <configuration>
-                <archive>
-               <!--     <manifest>
-                        <mainClass>opentree.MainRunner</mainClass>
-                    </manifest>-->
-                </archive>
                 <descriptorRefs>
                     <descriptorRef>jar-with-dependencies</descriptorRef>
                 </descriptorRefs>
