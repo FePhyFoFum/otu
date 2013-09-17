@@ -19,7 +19,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ ! $PREFIX ]; then
-	PREFIX="$HOME/phylo" # should fix the taxomachine script to put slashes in when dirs are appended
+	PREFIX="../" # should fix the taxomachine script to put slashes in when dirs are appended
 	if [ ! $FORCE ]; then
 		printf "\nprefix is not set. the default prefix $PREFIX will be used. continue? y/n:"
 		while [ true ]; do
@@ -33,9 +33,9 @@ if [ ! $PREFIX ]; then
 	fi
 fi
 
-if [ ! -d $PREFIX ]; then
-	mkdir $PREFIX
-fi
+#if [ ! -d $PREFIX ]; then
+#	mkdir $PREFIX
+#fi
 cd $PREFIX
 PREFIX=$(pwd)
 printf "\nworking at prefix $PREFIX\n"
