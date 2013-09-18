@@ -16,7 +16,7 @@ except ImportError:
 
 ### to make new pages, see the otu class in cgi-bin/
 
-current = "SEARCH_SOURCES"
+current = "BROWSE_AND_SEARCH"
 HTML = otu.get_html(current)
 
 #####################

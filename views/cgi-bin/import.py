@@ -26,7 +26,7 @@ except ImportError:
 
 ##################### page definition. to make new pages, see the otu.PAGES dict
 
-current = "SEARCH_AND_IMPORT"
+current = "IMPORT"
 HTML = otu.get_html(current)
 
 #####################

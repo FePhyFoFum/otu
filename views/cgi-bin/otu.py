@@ -13,14 +13,18 @@ The PAGES dict defines the page views. Each view consists of:
 """
 
 PAGES = {
-    "SEARCH_AND_IMPORT" : {
-        "title" : "Search and import sources",
-        "link" : "load_sources.py",
-        "html" : "load_sources.html" },
+    "IMPORT" : {
+        "title" : "Import data",
+        "link" : "import.py",
+        "html" : "import.html" },
 #    "SEARCH_SOURCES" : {
 #        "title" : "Search sources",
 #        "link" : "search_sources.py",
 #        "html" : "search_sources.html" },
+    "BROWSE_AND_SEARCH" : {
+        "title" : "Browse and search",
+        "link" : "browse_and_search.py",
+        "html" : "browse_and_search.html"},
     "VIEW_SOURCE" : {
         "title" : "View source",
         "link" : "source_view.py",
@@ -44,7 +48,7 @@ PAGES = {
 }
 
 # define the order in which pages appear in the navbar
-PAGE_ORDER = [ "SEARCH_AND_IMPORT", "VIEW_SOURCE", "VIEW_TREE", "PUSH_CHANGES", "TAXONOMY", "CONFIGURE" ]
+PAGE_ORDER = [ "IMPORT", "BROWSE_AND_SEARCH", "VIEW_SOURCE", "VIEW_TREE", "PUSH_CHANGES", "TAXONOMY", "CONFIGURE" ]
 
 def get_navbar(current):
     
