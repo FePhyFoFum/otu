@@ -16,11 +16,12 @@ git clone https://github.com/FePhyFoFum/otu.git
 
 ####Install dependencies
 
-OTU requires the jade and ot-base repositories to be installed into the local maven directory. You can run the following command in the newly cloned otu directory, which will download the dependencies from git and install them into your local maven repository cache. Of course, this requires maven (version 3).
+OTU requires the jade and ot-base repositories to be installed into the local maven directory. The following commands will download the dependencies from git and install them into your local maven repository cache. Of course, this requires maven (version 3).
 
 Running this script will clone the ot-base and jade repos into the parent directory of the otu repo. To place them elsewhere, install them manually. See directions at https://github.com/FePhyFoFum/jade and https://github.com/OpenTreeOfLife/ot-base.
 
 ```
+cd otu
 sh mvn_install_dependencies.sh
 ```
 
