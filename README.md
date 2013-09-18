@@ -1,52 +1,45 @@
 otu
 ===
 
-Here are some simple instructions to play around with this thing. 
+A simple, OT-compatible tool for doing some stuff with nexsons and trees.
 
-clone with 
-```
-clone https://github.com/blackrim/otu.git
-```
+Install
+-----
 
-Get a neo4j server. This is very simple. Just go here http://www.neo4j.org/ and click "Download Neo4j server". Unarchive then
-```
-cd neo4j-community-1.9.2/
-./bin/neo4j start
-```
+####Clone the repo:
 
-then start the otu server
+First, clone a copy of the OTU repo on your local machine.
+
 ```
-cd otu
-cd views
-./server.py
+git clone https://github.com/FePhyFoFum/otu.git
 ```
 
-go to http://localhost:8000/ and you are done.
+####Install dependencies
 
-Now you can upload any of the files from the avatol_nexsons in bitbucket (it pulls from there so that is 
-what the list is generated from). You can type the numbers for quicker access.
+OTU requires the jade and ot-base repositories to be installed into the local maven directory. You can run the following command in the newly cloned otu directory, which will download the dependencies from git and install them into your local maven repository cache. Of course, this requires maven (version 3).
 
-Pick one, say 2539 and do submit
-It will show up on the right
-Click it
-Bunch of the buttons don't work, but delete study from db does
+Running this script will clone the ot-base and jade repos into the parent directory of the otu repo. To place them elsewhere, install them manually. See directions at https://github.com/FePhyFoFum/jade and https://github.com/OpenTreeOfLife/ot-base.
 
-You can click the tree ids to go there (delete tree from db also works)
+```
+sh mvn_install_dependencies.sh
+```
 
-You will see in the tree metadata that ingroup_set is set if it comes in with an ingroup or if you choose it from the treeview
+OTU uses the jade and ot-base classes for many things. The source code for these dependencies is reasonably well-documented. You can refer to the class files in the jade and ot-base directories for more information. If you use Eclipse (with the m2eclipse plugin), just import the ot-base and jade repos as maven projects to browse their packages and classes.
 
-Need to work on the spacing of the tips for the treeview. I have the solution but have been lazy to put it there. Maybe later tonight.
+####Set up OTU
 
-The rooting_set will only set if you reroot or choose the existing root in the tree view.
+To set up OTU for the first time, you can use the included setup script. This will download a copy of neo4j, build the OTU plugin, configure and start the neo4j server, and the start the OTU webserver that will interact with the neo4j database. The setup will run into problems if there is another instance of OTU or neo4j (or anything else) running on either of the the default ports 8000 or 7474.
 
-Let's add another study that doesn't have the ingroup set or rooting
+Using the --force option tells the installer to put all the downloaded files at the default location, which is the parent directory of the current working directory (thus running it with --force from the otu directory installs in the parent of the otu directory itself). To install somewhere else, omit ```--force``` and add ```-prefix <prefix>``` to the arguments list.
 
-Go back to the load and list studies. Add 100. 
+```
+sh setup_otu.sh --start-otu --restart-neo4j --open-otu --force
+```
 
-If you go to tree 973 you will see that it doesn't have an ingroup. Click the 973. Click the choose ingroup button. Pick something. 
-You will see the larger nodes and green. If you go back to teh study, you will see that the ingroup_set is true.
+####Open OTU
 
-You can also refocus (button defaults back to that after choose_ingroup is done) and only the ingroup has the larger nodes.
+Once the setup has been completed, you can point your web browser to http://localhost:8000/ to access the OTU interface.
 
-Major missing things are adding more properties (including that all is well and vetted and ready to go), pushing back to git (it should do a diff with what is there so you know that things are new -- that would be easy to do),
-and the names validation which I think would also be pretty doable with the TNRS. Plenty of other stuff would be fun.
+####Additional information
+
+The setup_otu.sh script can be used to simplify a number of development tasks. For a list of options, enter ```./setup_otu.sh --help```.
