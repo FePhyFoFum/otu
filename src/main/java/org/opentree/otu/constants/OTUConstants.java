@@ -63,7 +63,8 @@ public enum OTUConstants {
 	};
 	
 	/**
-	 * Properties to be indexed exactly under the defined property name (there are others that we index in other ways, see DatabaseIndexer for examples).
+	 * Properties to be indexed exactly under the defined property name (there are others that we
+	 * index in other ways, see DatabaseIndexer for examples).
 	 */
 	public static final SearchableProperty[] TREE_PROPERTIES_FOR_SIMPLE_INDEXING = {
 		SearchableProperty.BRANCH_LENGTH_MODE,
