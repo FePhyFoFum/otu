@@ -1,11 +1,15 @@
 package org.opentree.otu.plugins;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import opentree.taxonomy.TaxonomyLoaderOTT;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.server.plugins.Description;
 import org.neo4j.server.plugins.Parameter;
 import org.neo4j.server.plugins.PluginTarget;
@@ -13,10 +17,13 @@ import org.neo4j.server.plugins.ServerPlugin;
 import org.neo4j.server.plugins.Source;
 import org.neo4j.server.rest.repr.OTRepresentationConverter;
 import org.neo4j.server.rest.repr.Representation;
+import org.opentree.graphdb.DatabaseUtils;
 import org.opentree.graphdb.GraphDatabaseAgent;
 import org.opentree.otu.ConfigurationManager;
+import org.opentree.otu.DatabaseBrowser;
 import org.opentree.otu.DatabaseManager;
 import org.opentree.otu.constants.OTUGraphProperty;
+import org.opentree.otu.constants.OTURelType;
 
 public class ConfigurationPlugins extends ServerPlugin {
 
@@ -61,7 +68,14 @@ public class ConfigurationPlugins extends ServerPlugin {
 		Object value = config.getGraphProperty(propertyName);
 		
 		Map<String, Object> result = new HashMap<String, Object>();
-		result.put(propertyName, value);
+		if (value != null) {
+			result.put("event", "success");
+			result.put(propertyName, value);
+		} else {
+			result.put("event", "failure");
+			result.put("message", "property '"+propertyName+"' does not exist.");
+		}
+
 		return OTRepresentationConverter.convert(result);
 	}
 
@@ -107,7 +121,36 @@ public class ConfigurationPlugins extends ServerPlugin {
 		
 		Map<String, Object> results = new HashMap<String, Object>();
 		results.put("event", "success");
-		
 		return OTRepresentationConverter.convert(results);
+	}
+
+	@Description( "Connect the OTT taxonomy to all OTU nodes with mapped ott ids in all local trees" )
+	@PluginTarget( GraphDatabaseService.class )
+	public Representation connectAllTreesToOTT(@Source GraphDatabaseService graphDb) {
+
+		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
+		DatabaseManager manager = new DatabaseManager(graphDb);
+
+		List<String> localSourceIds = browser.getSourceIds(DatabaseBrowser.LOCAL_LOCATION);
+
+		Transaction tx = graphDb.beginTx();
+		try {
+			for (String sourceId : localSourceIds) {
+				for (String treeId : browser.getTreeIdsForSourceId(DatabaseBrowser.LOCAL_LOCATION, sourceId)) {
+					Node root = browser.getTreeRootNode(treeId, DatabaseBrowser.LOCAL_LOCATION);
+					for (Node otu : DatabaseUtils.descendantTipTraversal(OTURelType.CHILDOF, Direction.INCOMING).traverse(root).nodes()) {
+						manager.connectTreeNodeToTaxonomy(otu);
+					}
+				}
+			}
+			tx.success();
+			
+		} finally {
+			tx.finish();
+		}
+		
+		Map<String, Object> result = new HashMap<String, Object>();
+		result.put("event", "success");
+		return OTRepresentationConverter.convert(result);		
 	}
 }

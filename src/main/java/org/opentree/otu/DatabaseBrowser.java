@@ -151,10 +151,10 @@ public class DatabaseBrowser extends OTUDatabase {
 	}
 	
 	/**
-	 * Return a list containing all the tree ids for the specified source id.
+	 * Return a list containing the ids of all imported sources
 	 * @return
 	 */
-	public Map<String, Object> getSourceIds(String location) {
+	public List<String> getSourceIds(String location) {
 		return getSourceIds(location, new HashSet<String>());
 	}
 	
@@ -162,7 +162,7 @@ public class DatabaseBrowser extends OTUDatabase {
 	 * Return a list containing the ids of all imported sources
 	 * @return
 	 */
-	public Map<String, Object> getSourceIds(String location, Set<String> excludedSourceIds) {
+	public List<String> getSourceIds(String location, Set<String> excludedSourceIds) {
 		List<String> sourceIds = new LinkedList<String>();
 		
 		IndexHits<Node> sourcesFound = sourceMetaNodesBySourceId.query(location + OTUConstants.SOURCE_ID + ":*");
@@ -177,24 +177,22 @@ public class DatabaseBrowser extends OTUDatabase {
 			sourcesFound.close();
 		}
 		
-		Map<String, Object> results = new HashMap<String, Object>();
-		results.put("sources", sourceIds);
-		return results;
+		return sourceIds;
 	}
 	
 	/**
 	 * Return a list containing all the tree ids for the specified source id.
 	 * @return
 	 */
-	public Map<String, Object> getTreeIdsForSourceId(String location, String sourceId) {
-		return getTreeIdsForSource(location, sourceId, new HashSet<String>());
+	public List<String> getTreeIdsForSourceId(String location, String sourceId) {
+		return getTreeIdsForSourceId(location, sourceId, new HashSet<String>());
 	}
 	
 	/**
 	 * Return a list containing all the tree ids for the specified source id except any tree ids that are in the excludedTreeIds variable.
 	 * @return
 	 */
-	public Map<String, Object> getTreeIdsForSource(String location, String sourceId, Set<String> excludedTreeIds) {
+	public List<String> getTreeIdsForSourceId(String location, String sourceId, Set<String> excludedTreeIds) {
 	
 		List<String> treeIds = new LinkedList<String>();
 		
@@ -210,9 +208,7 @@ public class DatabaseBrowser extends OTUDatabase {
 			hits.close();
 		}
 		
-		Map<String, Object> results = new HashMap<String, Object>();
-		results.put("trees", treeIds);
-		return results;
+		return treeIds;
 	}
 	
 	/**
@@ -237,11 +233,13 @@ public class DatabaseBrowser extends OTUDatabase {
 	 */
 	public static Set<Node> getDescendantTips(Node ancestor) { // does not appear to be used.
 		HashSet<Node> descendantTips = new HashSet<Node>();
-		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(OTURelType.CHILDOF, Direction.INCOMING);
-		for (Node curGraphNode: CHILDOF_TRAVERSAL.breadthFirst().traverse(ancestor).nodes()) {
-			if (curGraphNode.hasProperty(OTUNodeProperty.IS_OTU.propertyName())) { // what is this? should this be "otu"?
+		
+//		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(OTURelType.CHILDOF, Direction.INCOMING);
+//		for (Node curGraphNode: CHILDOF_TRAVERSAL.breadthFirst().traverse(ancestor).nodes()) {
+		for (Node curGraphNode : DatabaseUtils.descendantTipTraversal(OTURelType.CHILDOF, Direction.INCOMING).traverse(ancestor).nodes()) {
+//			if (curGraphNode.hasProperty(OTUNodeProperty.IS_OTU.propertyName())) { // what is this? should this be "otu"?
 				descendantTips.add(curGraphNode);
-			}
+//			}
 		}
 		return descendantTips;
 	}

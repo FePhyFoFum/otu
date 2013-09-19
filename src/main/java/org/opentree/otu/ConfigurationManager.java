@@ -15,6 +15,10 @@ public class ConfigurationManager extends OTUDatabase {
 		super(gds);
 	}
 	
+	public ConfigurationManager(GraphDatabaseAgent gda) {
+		super(gda);
+	}
+	
 	public boolean setNexsonGitDir(String dir) {
 		//TODO: make sure that the directory exists
 		try {
@@ -37,6 +41,20 @@ public class ConfigurationManager extends OTUDatabase {
 	
 	public Object getGraphProperty(String propertyName) {		
 		return graphDb.getGraphProperty(OTUGraphProperty.valueOf(propertyName.toUpperCase()));
+	}
+	
+	public Object getGraphProperty(OTProperty property) {
+		return graphDb.getGraphProperty(property);
+	}
+	
+	public boolean hasTaxonomy() {
+		Object hasTax = graphDb.getGraphProperty(OTUGraphProperty.HAS_TAXONOMY);
+		if (hasTax != null) {
+			if ((Boolean) hasTax == true) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	public void setGraphProperty(String propertyName, String value, String type) {		

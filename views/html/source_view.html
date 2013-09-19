@@ -9,6 +9,8 @@
 body {
     padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 
+} .editOnly {
+
 /*} .treeHeader {
     position: relative;
     border: 1px solid red;
@@ -36,7 +38,9 @@ body {
     top: 0;
 
 } #statusReport {
-/*    padding: 0.2em 0 0.2em 0.4em; */
+
+} .treeStatusReport {
+    padding: 1em 0 0.2em 0.4em;
 
 } #format {
     margin-top: 2em;
@@ -92,6 +96,7 @@ body {
             <br/>
             <form id="sourceEditForm" style="position: relative;">
                 <div id="statusReport"></div>
+                <input type="hidden" name="propertiesToRemove" /> 
                 <button name="submitSourceEditsBtn" id="submitSourceEditsBtn" type="button" class="btn btn-medium btn-success hidden">Save changes</button>
                 <table class="table table-striped formTable" id="sourceInfoTable"></table>
             </form>
@@ -162,7 +167,7 @@ function displaySourceInfo() {
         });
         
         // TODO: update the status message about this source
-        $("#statusReport").append("Status: info about mapped names, rooting, ingroup, X% complete will go here");
+        $("#statusReport").append("Summary info goes here: how many trees, how many rooted/ingroup/etc, % taxon composition, etc.");
         
         // add the trees
         $(response.trees).each(function(i, treeId) {
@@ -183,39 +188,39 @@ function displayTreeInfo(treeId) {
         var formId = "treeEditForm" + treeId;
         var response = JSON.parse(xhr.responseText);
         var treeForm = $(document.createElement("form")) //); //.addClass("treeHeader");
-
-        // write the header for this tree
-//        $(treeForm)
             .addClass("editForm")
-//            .append($("<form>")
             .attr("id",formId)
-//            .append($(document.createElement("a"))
-//                .attr("href","tree_view.py?treeId=" + treeId)
-//                .append(treeId))
-                .append($(document.createElement("button"))
-                    .attr("type", "button")
-                    .addClass("btn btn-medium doNotHide")
-                    .click(function() { window.location.href="tree_view.py?treeId=" + treeId; })
-                    .append("View tree"))
-                .append($(document.createElement("button"))
-                    .attr("type","button")
-                    .addClass("btn btn-medium doNotHide editTreeBtn")
-                    .click(function() { toggleTreeEditForm($("#"+formId)) })
-                    .append("Edit metadata"))
-                .append($(document.createElement("button"))
-                    .attr("type","button")
-                    .addClass("btn btn-medium doNotHide deleteTreeBtn")
-                    .click(function() { deleteTree(treeId) })
-                    .append("Delete tree"))
-                .append($(document.createElement("input"))
-                    .attr("type","hidden")
-                    .attr("name","treeId")
-                    .val(treeId))
-                .append($(document.createElement("button"))
-                    .addClass("btn btn-medium btn-success hidden submitTreeEditsBtn")
-                    .attr("type","button")
-                    .append("Save changes")
-                    .click(function() { submitTreeEditForm(treeId, formId) }));
+            .append($("<input>")
+                .attr("type","hidden")
+                .attr("name","propertiesToRemove"))
+            .append($(document.createElement("button"))
+                .attr("type", "button")
+                .addClass("btn btn-medium doNotHide")
+                .click(function() { window.location.href="tree_view.py?treeId=" + treeId; })
+                .append("View tree"))
+            .append($(document.createElement("button"))
+                .attr("type","button")
+                .addClass("btn btn-medium doNotHide editTreeBtn")
+                .click(function() { toggleTreeEditForm($("#"+formId)) })
+                .append("Edit metadata"))
+            .append($(document.createElement("button"))
+                .attr("type","button")
+                .addClass("btn btn-medium doNotHide deleteTreeBtn")
+                .click(function() { deleteTree(treeId) })
+                .append("Delete tree"))
+            .append($(document.createElement("input"))
+                .attr("type","hidden")
+                .attr("name","treeId")
+                .val(treeId))
+            .append($(document.createElement("button"))
+                .addClass("btn btn-medium btn-success hidden submitTreeEditsBtn")
+                .attr("type","button")
+                .append("Save changes")
+                .click(function() { submitTreeEditForm(treeId, formId) }))
+            .append($("<div>")
+                .addClass("treeStatusReport")
+                .html("Summary info goes here: is working/saved, has mapped names, is rooted, has ingroup labeled, % taxon composition, etc."))
+;
 
 //        $(treeForm).append(treeHeader);
             
@@ -230,10 +235,19 @@ function displayTreeInfo(treeId) {
             var value = response.metadata[property];
             $(treeTable).append(getFormTableRow(property, value));
         });
-
+        
         // add the tree metadata to the page
-        $(treeForm).append(treeTable);
-        $("#treeInfo").append($("<h4>").append("Tree " + treeId)).append(treeForm);
+        $(treeForm)
+            .append(treeTable)
+            .append($("<button>")
+                .attr("type", "button")
+                .addClass("hidden")
+                .html("Add property")
+                .click(function() { appendNewPropertyRow(treeTable); return false; }));
+        
+        $("#treeInfo")
+            .append($("<h4>").append("Tree " + treeId))
+            .append(treeForm);
     });
     
     xhr.send(JSON.stringify({"treeId": treeId}));
@@ -253,8 +267,14 @@ function getFormTableRow(property, value, displayValue) {
     
     // create a row for this property
     var row = $("<tr>")
+        .addClass("doNotHide")
         .append($("<td>")
             .attr("width","250px")
+            .append($("<button>")
+                .attr("type", "button")
+                .addClass("hidden")
+                .html("Remove")
+                .click(function() { hidePropertyAndMarkForDeletionFromDB(row); return false; } ))
             .append(property))
         .append($("<td>")
             .addClass("fieldCell")
@@ -262,6 +282,51 @@ function getFormTableRow(property, value, displayValue) {
             .append(formControl));
 
     return row;
+}
+
+function appendNewPropertyRow(table) {
+    
+    formControl = $("<input>").addClass("form-control").attr("value","").attr("type","text");
+    
+    var row = $("<tr>")
+        .append($("<td>")
+            .attr("width","250px")
+            .append($("<button>")
+                .attr("type", "button")
+                .html("Remove")
+                .click(function() { removePropertyFromFormOnly(row); return false; } ))
+            .append($("<select>")
+                .append($("<option>")
+                    .html("Property list"))))
+        .append($("<td>")
+            .addClass("fieldCell")
+            .append(formControl));
+
+    $(table).append(row);
+}
+
+function removePropertyFromFormOnly(row) {
+    $(row).remove();
+}
+
+function hidePropertyAndMarkForDeletionFromDB(row) {
+    
+    var propertyName = $(row).children(".fieldCell").children(".form-control").attr("name");
+    alert(propertyName);
+    
+    var enclosingForm = $(row).parents("form");
+    var toRemoveText = $(enclosingForm).children("[name='propertiesToRemove']").val();
+    if (toRemoveText.length < 1) {
+        toRemoveText = JSON.stringify([propertyName,]);
+    } else {
+        var toRemoveArr = JSON.parse(toRemoveText);
+        toRemoveArr.push(propertyName);
+        toRemoveText = JSON.stringify(toRemoveArr);
+    }
+    alert(toRemoveText);
+    $(enclosingForm).children("[name='propertiesToRemove']").val(toRemoveText);
+    
+    $(row).removeClass(" doNotHide").addClass("hidden");
 }
 
 // ===== functions bound to page buttons and forms
@@ -294,19 +359,34 @@ function toggleTreeEditForm(treeEditForm) {
     } 
 }
 
-function toggleEditForm(formElement) {
-//    alert(formElement);
-    $(formElement).find(".fieldCell .displayValue").each(function(i, display) {
+function toggleEditForm(theForm) {
+
+/*    $(theForm).find(".editOnly").each(function(i, display) {
+        alert(display);
+        $(display).hasClass("hidden") ? $(display).removeClass(" hidden") : $(display).addClass(" hidden");
+    }); */
+        
+    $(theForm).find(".fieldCell .displayValue").each(function(i, display) {
         $(display).hasClass("hidden") ? $(display).removeClass(" hidden") : $(display).addClass(" hidden");
     });
-    $(formElement).find(".fieldCell .form-control").each(function(i, input) { 
+    
+    $(theForm).find(".fieldCell .form-control").each(function(i, input) { 
         $(input).hasClass("hidden") ? $(input).removeClass(" hidden") : $(input).addClass(" hidden");
     });
-    $(formElement).find("button").each(function(i, button) {
+    
+    $(theForm).find("button").each(function(i, button) {
         if ($(button).hasClass("hidden")) {
             $(button).removeClass(" hidden")
         } else if (! $(button).hasClass("doNotHide")) {
             $(button).addClass(" hidden");
+        }
+    });
+    
+    $(theForm).find("tr").each(function(i, row) {
+        if ($(row).hasClass("hidden")) {
+            $(row).removeClass(" hidden")
+        } else if (! $(row).hasClass("doNotHide")) {
+            $(row).addClass(" hidden");
         }
     });
 }
@@ -350,13 +430,21 @@ function submitPropertyEdits(nodeId, propertyForm) {
     var values = [];
     var types = [];
     $(propertyForm).find(".fieldCell .form-control").each(function(i, input) {
-        keys.push(input.name);
-        values.push(input.value);
-        types.push(typeof input.value);
+        if (! $(input).parents("tr").hasClass("hidden")) {
+            keys.push(input.name);
+            values.push(input.value);
+            types.push(typeof input.value);
+        }
     });
+
+    var propertiesToRemove = [];
+    var propertiesToRemoveText = $(propertyForm).children("[name='propertiesToRemove']").val();
+    if (propertiesToRemoveText.length > 0) {
+        propertiesToRemove = JSON.parse(propertiesToRemoveText);
+    }
     
     // send the property edit request using the source meta node id
-    xhr.send(JSON.stringify({"keys": keys, "values": values, "types": types}));
+    xhr.send(JSON.stringify({"keys": keys, "values": values, "types": types, "propertiesToRemove": propertiesToRemove}));
 }
 
 function editTreeInfo(treeId) {

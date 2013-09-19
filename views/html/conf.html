@@ -107,15 +107,28 @@ function loadOTT() {
         if (response.event == "success") {
             setGraphProperty("has_taxonomy", "true", "boolean", function() {
                 updateLoadOTTForm(response);
-                $("#statusMessage").html("OTT was loaded successfully");
+                $("#statusMessage").html("<p>OTT was loaded successfully.</p>");
             });
         }
-    });
+    }, true);
     
     // TODO: make this variable set by a python script that will download the OTT file.
     // Call this function on page load as a callback if some incoming form variable indicates to do so.
     xhr.send(JSON.stringify({taxonomyFile:"/home/cody/phylo/data/ott2.2/taxonomy"}));
     $("#statusMessage").html("<p>Your request to load the taxonomy has been submitted. This will take some time. This page will be updated when the load is complete. Please leave this page open.</p>");
+}
+
+function connectExistingTreesToOTT() {
+
+    $("#statusMessage").append("<p>Now connecting taxonomy to previously loaded trees.</p>");
+
+    var installOTTService = "http:/localhost:7474/db/data/ext/ConfigurationPlugins/graphdb/connectAllTreesToOTT";
+    var xhr = getXhr(installOTTService, function() {
+        var response = JSON.parse(xhr.responseText);
+        if (response.event == "success") {
+            $("#statusMessage").append("<p>Connecting to trees is done. The taxonomy has been fully installed. Trees will be connected upon loading and upon assignment to taxa.</p>");
+        }
+    });
 }
 
 function updateLoadOTTForm(response) {

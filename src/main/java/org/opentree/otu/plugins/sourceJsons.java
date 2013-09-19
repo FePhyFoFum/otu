@@ -14,6 +14,7 @@ import javax.ws.rs.core.MediaType;
 
 import jade.tree.*;
 
+import org.opentree.otu.ConfigurationManager;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -34,6 +35,7 @@ import org.opentree.nexson.io.NexsonSource;
 import org.opentree.otu.DatabaseBrowser;
 import org.opentree.otu.DatabaseManager;
 import org.opentree.otu.OTUDatabaseUtils;
+import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.DuplicateSourceException;
@@ -50,17 +52,16 @@ public class sourceJsons extends ServerPlugin {
 	@PluginTarget(GraphDatabaseService.class)
 	public Representation getTreeIdsForAllLocalSources(@Source GraphDatabaseService graphDb,
 		@Description("Tree ids to exclude from the results") @Parameter(name="excludedTreeIds", optional=true) String[] excludedTreeIdsArr){
-/*		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
-		String sourcetreelist = browser.getJSONOfSourceIdsAndTreeIdsForImportedTrees();
-		return sourcetreelist; */
 		Set<String> excludedTreeIds = new HashSet<String>();
 		if (excludedTreeIdsArr != null) {
 			for (Object tid : excludedTreeIdsArr) {
 				excludedTreeIds.add((String) tid);
 			}
 		}
-		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
-		return OTRepresentationConverter.convert(browser.getTreeIdsForSource(browser.LOCAL_LOCATION, "*", excludedTreeIds));
+		DatabaseBrowser browser = new DatabaseBrowser(graphDb);	
+		Map<String, Object> results = new HashMap<String, Object>();
+		results.put("trees", browser.getTreeIdsForSourceId(browser.LOCAL_LOCATION, "*", excludedTreeIds));
+		return OTRepresentationConverter.convert(results);
 	}
 	
 	@Description("Return JSON containing information tree ids for the specified source")
@@ -76,7 +77,9 @@ public class sourceJsons extends ServerPlugin {
 			}
 		}
 		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
-		return OTRepresentationConverter.convert(browser.getTreeIdsForSource(browser.LOCAL_LOCATION, sourceId, excludedTreeIds));
+		Map<String, Object> results = new HashMap<String, Object>();
+		results.put("trees", browser.getTreeIdsForSourceId(browser.LOCAL_LOCATION, sourceId, excludedTreeIds));
+		return OTRepresentationConverter.convert(results);
 	}
 
 	@Description("Return JSON containing information about local trees")
@@ -90,7 +93,9 @@ public class sourceJsons extends ServerPlugin {
 			}
 		}
 		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
-		return OTRepresentationConverter.convert(browser.getSourceIds(browser.LOCAL_LOCATION, excludedSourceIds));
+		Map<String, Object> results = new HashMap<String, Object>();
+		results.put("sources", browser.getSourceIds(browser.LOCAL_LOCATION, excludedSourceIds));
+		return OTRepresentationConverter.convert(results);
 	}
 
 	/**
@@ -99,7 +104,7 @@ public class sourceJsons extends ServerPlugin {
 	 * @param nodeid
 	 * @return
 	 */
-	@Description("Load a single newick tree into the graph")
+	@Description("Load a single newick tree into the graph") // TODO: this crashes the db (at least sometimes?)... Not sure why
 	@PluginTarget(GraphDatabaseService.class)
 	public Representation putSourceNewickSingle(
 			@Source GraphDatabaseService graphDb,
@@ -111,10 +116,6 @@ public class sourceJsons extends ServerPlugin {
 		GraphDatabaseAgent gdb = new GraphDatabaseAgent(graphDb);
 		DatabaseManager dm = new DatabaseManager(gdb);
 		NexsonSource source = new NexsonSource(sourceId);
-
-		// ArrayList<JadeTree> trees = new ArrayList<JadeTree>();
-		// JadeTree t = tr.readTree(newickString);
-		// trees.add(t);
 
 		TreeReader tr = new TreeReader();
 		source.addTree(tr.readTree(newickString));
@@ -207,9 +208,6 @@ public class sourceJsons extends ServerPlugin {
 			}
 		}
 		
-//		String metadata = DatabaseBrowser.getMetadataJSONForSource(sourceMeta);
-//		return metadata;
-		
 		return OTRepresentationConverter.convert(sourceMeta == null ? null : browser.getMetadataForSource(sourceMeta));
 	}
 
@@ -225,10 +223,26 @@ public class sourceJsons extends ServerPlugin {
 			@Description("The keys for the properties to be set") @Parameter(name="keys", optional=false) String[] keys,
 			@Description("The values for the properties to be set") @Parameter(name="values", optional=false) String[] values,
 			@Description("The types for the values to be set. These are case-insensitive and must be one of 'boolean', 'integer', 'decimal', or 'string'")
-					@Parameter(name="types", optional=false) String[] types) {
+					@Parameter(name="types", optional=false) String[] types,
+			@Description("Names of properties to be removed") @Parameter(name="propertiesToRemove", optional=true) String[] propertiesToRemove) {
 		
-		DatabaseManager manager = new DatabaseManager(node.getGraphDatabase());
+		// TODO: would be better to have this all contained in a single transaction.
+		
+		GraphDatabaseService gds = node.getGraphDatabase();
+		DatabaseManager manager = new DatabaseManager(gds);
 		manager.setProperties(node, keys, values, types);
+		
+		Transaction tx = gds.beginTx();
+		try {
+			if (propertiesToRemove != null) {
+				for (String key : propertiesToRemove) {
+					node.removeProperty(key);
+				}
+			}
+			tx.success();
+		} finally {
+			tx.finish();
+		}
 		
 		Map<String, Object> result = new HashMap<String, Object>();
 		result.put("event", "success");
@@ -247,10 +261,9 @@ public class sourceJsons extends ServerPlugin {
 			@Description("The ott id of the taxon to be set") @Parameter(name="ottId", optional=false) Long ottId,
 			@Description("The name of the ott taxon corresponding to this ott id") @Parameter(name="taxonName", optional=false) String taxonName) {
 		
-		DatabaseManager manager = new DatabaseManager(node.getGraphDatabase());
-/*		String[] keys = {OTVocabulary.OT_OTT_ID.propertyName(), OTVocabulary.OT_OTT_TAXON_NAME.propertyName(), OTUNodeProperty.NAME.propertyName()};
-		String[] values = {ottId.toString(), taxonName, taxonName};
-		String[] types = {"integer", "string", "string"}; */
+		GraphDatabaseAgent graphDb = new GraphDatabaseAgent(node.getGraphDatabase());
+		ConfigurationManager config = new ConfigurationManager(graphDb);
+		DatabaseManager manager = new DatabaseManager(graphDb);
 		
 		Map<String, Object> properties = new HashMap<String, Object>();
 		properties.put(OTVocabulary.OT_OTT_ID.propertyName(), ottId);
@@ -259,9 +272,10 @@ public class sourceJsons extends ServerPlugin {
 		
 		manager.setProperties(node, properties);
 
-		// remove any existing tnrs matches
 		Transaction tx = node.getGraphDatabase().beginTx();
 		try {
+
+			// remove any existing tnrs matches
 			for (Node match : Traversal.description().relationships(OTURelType.TNRSMATCHFOR, Direction.INCOMING).traverse(node).nodes()) {
 				if (match !=  node) {
 					for (Relationship rel : match.getRelationships()) {
@@ -270,6 +284,12 @@ public class sourceJsons extends ServerPlugin {
 					match.delete();
 				}
 			}
+
+			// attach to taxonomy if present
+			if (config.hasTaxonomy()) {
+				manager.connectTreeNodeToTaxonomy(node);
+			}
+			
 			tx.success();
 		} finally {
 			tx.finish();
@@ -330,45 +350,22 @@ public class sourceJsons extends ServerPlugin {
 	 * @throws IOException
 	 * @throws ParseException
 	 */
-	@Description ("Hit the TNRS for all the names in a subtree. Return the results.")
+	@Description ("Submit a query for autocompletion of taxon name.")
 	@PluginTarget( GraphDatabaseService.class )
 	public Representation autocompleteTaxonName(@Source GraphDatabaseService graphDb,
 		@Description ("The url of the TNRS service to use. If not supplied then the public OT TNRS will be used.")
 			@Parameter (name="TNRS Service URL", optional=true) String tnrsURL,
 		@Description ("The query string to submit to the autocomplete service")
 			@Parameter(name="queryString", optional=false) String queryString) throws IOException, ParseException {
-
-		// start a transaction for edits
-//        GraphDatabaseAgent graphDb = new GraphDatabaseAgent(root.getGraphDatabase()) ;
-//        Transaction tx = graphDb.beginTx();
-		
-		// get ids and names and names to send to tnrs
-//		LinkedList<Long> nodeIds = new LinkedList<Long>();
-//		LinkedList<String> names = new LinkedList<String>();
-//		for (Node otu : DatabaseUtils.DESCENDANT_OTU_TRAVERSAL.traverse(root).nodes()) {
-//		for (Node child : Traversal.description().relationships(RelType.CHILDOF, Direction.INCOMING).traverse(root).nodes()) {
-			// TODO: allow the choice to use mapped or original names... currently that leads to nullpointerexceptions
-
-			// record that we have TNRS'd this node (i.e. this clade on the tree)
-//			child.setProperty(NodeProperty.PROCESSED_BY_TNRS.name, true);
-			
-			// for tip nodes, record names to hit against tnrs
-//			if (!child.hasRelationship(RelType.CHILDOF, Direction.INCOMING)) {
-//				if (child.hasProperty(NodeProperty.NAME.name)) {
-//					nodeIds.add(child.getId());
-//					names.add((String) child.getProperty(NodeProperty.NAME.name));
-//				}
-//			}
-//		}
 		
 		if (tnrsURL == null) {
+			// TODO: get this from a graph property, which will be set to use local tnrs if it is installed
 			tnrsURL = "http://dev.opentreeoflife.org/taxomachine/ext/TNRS/graphdb/autocompleteBoxQuery/";
 		}
 		
 		// gather the data to be sent to tnrs
 		Map<String, Object> query = new HashMap<String, Object>();
 		query.put("queryString", queryString);
-//		query.put("idInts", nodeIds);
 
         // set up the connection
         ClientConfig cc = new DefaultClientConfig();
@@ -383,74 +380,5 @@ public class sourceJsons extends ServerPlugin {
         JSONArray response = (JSONArray) parser.parse(respJSON);
         
         return OTRepresentationConverter.convert(response);
-        
-//        root.setProperty(NodeProperty.CONTEXT_NAME.name, response.get("context"));
-//        root.setProperty(NodeProperty.PROCESSED_BY_TNRS.name, true);
-        
-/*        try {
-	        // walk the results
-	        for (Object nameResult : (JSONArray) response.get("results")) {
-	
-	        	JSONArray matches = (JSONArray) ((JSONObject) nameResult).get("matches");
-	        	Node otuNode = graphDb.getNodeById((Long) ((JSONObject) nameResult).get("id"));
-	        	
-	        	// remove previous TNRS result nodes
-	        	for (Relationship tnrsRel : otuNode.getRelationships(RelType.TNRSMATCHFOR)) {
-	        		Node tnrsNode = tnrsRel.getStartNode();
-	        		tnrsRel.delete();
-	        		tnrsNode.delete();
-	        	}
-	        	
-	        	// remove previous taxon matching info
-	        	otuNode.removeProperty(NodeProperty.OT_OTT_ID.name);
-	        	otuNode.removeProperty(NodeProperty.OT_OTT_TAXON_NAME.name);
-	        	
-	            // if there is an exact match, store the match info in the graph node
-	        	if (matches.size() == 1) {
-	        		JSONObject match = ((JSONObject) matches.get(0));
-	        		if ((Double) match.get("score") == 1.0) {
-	        			
-	        			otuNode.setProperty(NodeProperty.OT_OTT_ID.name, match.get("matched_ott_id"));
-	        			otuNode.setProperty(NodeProperty.OT_OTT_TAXON_NAME.name,  match.get("matched_name"));
-	        		}
-	        	} else {
-	        		
-	        		// create TNRS result nodes holding each match's info
-	        		for (Object m : matches) {
-	        			JSONObject match = (JSONObject) m;
-	        			Node tnrsNode = graphDb.createNode();
-	        			for (Object property : match.keySet()) {
-	        				Object value = match.get(property);
-	        				if (property.equals("flags")) {
-	        					String[] flags = new String[((JSONArray) value).size()];
-	        					int i = 0;
-	        					for (Object flag : (JSONArray) value) {
-	        						flags[i++] = (String) flag;
-	        					}
-	        				} else {
-	        					tnrsNode.setProperty((String) property, value);
-	        				}
-	        			}
-	        			tnrsNode.createRelationshipTo(otuNode, RelType.TNRSMATCHFOR);
-	        		}
-	        	}
-	        }
-	        tx.success();
-        } finally {
-        	tx.finish();
-        }
-        
-        // return relevant info
-        Map<String, Object> result = new HashMap<String, Object>();
-        result.put("event", "success");
-        result.put("treeId", DatabaseUtils.getRootOfTreeContaining(root).getProperty(NodeProperty.TREE_ID.name));
-        result.put("rootNodeId", root.getId());
-        result.put("unmatched_name_ids", response.get("unmatched_name_ids"));
-        result.put("matched_name_ids", response.get("matched_name_ids"));
-        result.put("unambiguous_name_ids", response.get("unambiguous_name_ids"));
-        result.put("context", response.get("context"));
-        return OpentreeRepresentationConverter.convert(result); */
-        
 	}
-	
 }

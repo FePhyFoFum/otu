@@ -25,8 +25,9 @@ public class OTUDatabase extends DatabaseAbstractBase {
 		super(gdb);
 	}
 	
-	// currently we always want fulltext indexes in OTU, so we code that in here.
-	// could extend the NodeIndexDescription to allow specifying these in a more general way
+	// Currently we always want fulltext indexes for OTU itself, so just we code that in here.
+	// To specify other types of indexes we can just pass the relevant parameters as String... arguments,
+	// which will invoke the analagous underlying method in DatabaseAbstractBase. See DatabaseManager for an example.
 	public Index<Node> getNodeIndex(NodeIndexDescription index) {
 		return graphDb.getNodeIndex(index.indexName(), IndexManager.PROVIDER, "lucene", "type", "fulltext");
 	}

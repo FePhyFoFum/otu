@@ -28,10 +28,10 @@ body {
     
         <script>
             
-function updateView() {
-    
-    $("#statusMessage").html("The OTT taxonomy has been loaded.");
-    
+function updateView(response) {
+    if (response.has_taxonomy) {
+        $("#statusMessage").html("The OTT taxonomy has been loaded.");
+    }
 }
 
 $(document).ready(function() {

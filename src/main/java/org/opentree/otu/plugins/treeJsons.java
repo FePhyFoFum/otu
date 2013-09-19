@@ -1,18 +1,15 @@
 package org.opentree.otu.plugins;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 
 import jade.tree.*;
 
+import org.opentree.otu.ConfigurationManager;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -29,7 +26,7 @@ import org.neo4j.server.rest.repr.Representation;
 import org.opentree.graphdb.GraphDatabaseAgent;
 import org.opentree.otu.DatabaseBrowser;
 import org.opentree.otu.DatabaseManager;
-import org.opentree.otu.OTUDatabaseUtils;
+import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.NoSuchTreeException;
@@ -293,6 +290,8 @@ public class treeJsons extends ServerPlugin{
 
 		// start a transaction for edits
         GraphDatabaseAgent graphDb = new GraphDatabaseAgent(root.getGraphDatabase()) ;
+		DatabaseManager manager = new DatabaseManager(graphDb);
+		ConfigurationManager config = new ConfigurationManager(graphDb);
         Transaction tx = graphDb.beginTx();
 		
 		// get ids and names and names to send to tnrs
@@ -360,9 +359,17 @@ public class treeJsons extends ServerPlugin{
 	        	if (matches.size() == 1) {
 	        		JSONObject match = ((JSONObject) matches.get(0));
 	        		if ((Double) match.get("score") == 1.0) {
-	        			
+	        				        			
 	        			otuNode.setProperty(OTVocabulary.OT_OTT_ID.propertyName(), Long.valueOf((String) match.get("matched_ott_id")));
 	        			otuNode.setProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName(),  match.get("matched_name"));
+
+	        			// attach to taxonomy if there is one
+	        			if (config.hasTaxonomy()) {
+		        			manager.connectTreeNodeToTaxonomy(otuNode);
+	        			}
+	        			
+	        			// also set the basic label property so other things will know we matched this name
+	        			otuNode.setProperty(OTUNodeProperty.NAME.propertyName(),  match.get("matched_name"));
 	        		}
 	        		
 	        	} else {

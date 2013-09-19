@@ -28,5 +28,11 @@ public enum OTURelType implements RelationshipType {
 	/**
 	 * Associates the root node of a working copy of an imported tree with the original copy.
 	 */
-	WORKINGCOPYOF;
+	WORKINGCOPYOF,
+
+	/**
+	 * Connects taxon nodes (imported from the OTT taxonomy by taxomachine) to tree nodes to which they have been assigned.
+	 */
+	EXEMPLAROF;
+	
 }

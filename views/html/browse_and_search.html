@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
     <head>
-        <title>OTU: check out what's in there</title>
+        <title>OTU: what's in there?</title>
 
         $$HEAD_CONTENT$$
 
@@ -217,20 +217,24 @@ function initRemoteIndexing() {
 
 }
 
+var sources;
+
 function indexEachRemoteNexson(curNexsonsBaseURL) {
     var nexsonsListURL = "http://localhost:7474/db/data/ext/Indexing/graphdb/getNexsonsListFromURL";
+
+    countProcessed = 0;
 
     var xobj = new XMLHttpRequest();
     xobj.onreadystatechange=function() {
 //		alert(xobj.responseText);
         if (xobj.readyState==4 && xobj.status==200) {
 //        alert(xobj.responseText);
-            var sources = JSON.parse(xobj.responseText)
+            sources = JSON.parse(xobj.responseText);
             totalCount = sources.length;
-            for (var i=0; i < sources.length; i++) {
+//            for (var i=0; i < sources.length; i++) {
 //                alert("sending " + sources[i]); 
-                indexSingleSource(sources[i], curNexsonsBaseURL + sources[i], i*100);
-            }
+                indexSourcesRecursive(0);//, curNexsonsBaseURL + sources[0]);
+//            }
         }
     }
     
@@ -244,10 +248,13 @@ function indexEachRemoteNexson(curNexsonsBaseURL) {
 
 }
 
-function indexSingleSource(sid, url, delay) {
-    var sourceId = sid;
-    var URL = url;
-    setTimeout(function() {
+function indexSourcesRecursive(i) { //, url) {
+    var sourceId = sources[i];
+    var url = curNexsonsBaseURL +  sourceId; // url;
+    
+    
+    
+//    setTimeout(function() {
         var indexServiceURL = "http://localhost:7474/db/data/ext/Indexing/graphdb/indexSingleNexson";
 //        alert("received " + sourceId); 
 
@@ -272,15 +279,19 @@ function indexSingleSource(sid, url, delay) {
 
                 }
 
-                countProcessed++;
-                document.getElementById("statusCount").innerHTML = "<p>Sources processed: " + countProcessed + " / " + totalCount + "</p>";
+                i++;
+                document.getElementById("statusCount").innerHTML = "<p>Sources processed: " + i + " / " + totalCount + "</p>";
+ 
+                if (countProcessed < totalCount) {
+                    indexSourcesRecursive(i, url)
+                }
             }
         }
         xobj.open("POST", indexServiceURL, true);
         xobj.setRequestHeader("Accept", "*/*");
         xobj.setRequestHeader("Content-Type","Application/json");
         xobj.send(JSON.stringify({ "sourceId" : sourceId, "url" : url }));
-    }, delay);
+//    }, delay);
 }
 
 function setStatus(statusMsg, replace) {
