@@ -1,12 +1,12 @@
 package org.opentree.otu.constants;
 
-import org.opentree.properties.OTProperty;
+import org.opentree.properties.OTPropertyPredicate;
 
 /**
  * Graph properties are stored in node 0. These are basic pieces of information relevant at the 
  * scale of the entire graph.
  */
-public enum OTUGraphProperty implements OTProperty {
+public enum OTUGraphProperty implements OTPropertyPredicate {
 	
 	/** The directory on the current system where the nexson git lies */
 	NEXSON_GIT_DIR ("nexsonGitDir", String.class), //, to add more

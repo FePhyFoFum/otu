@@ -151,6 +151,7 @@ function displaySourceInfo() {
 	    $("#submitSourceEditsBtn").click(function() { submitSourceEditForm() });
         
         var keys = Object.keys(response.metadata);
+        var sourceInfoTable = $("#sourceInfoTable");
         
         // print the source properties to the table
         $(keys).each(function(i, property){
@@ -163,8 +164,15 @@ function displaySourceInfo() {
             }
 
             // append a row for each property
-            $("#sourceInfoTable").append(getFormTableRow(property, value, link));
+            $(sourceInfoTable).append(getFormTableRow(property, value, link));
         });
+
+        $(sourceInfoTable)
+            .append($("<button>")
+            .attr("type", "button")
+            .addClass("hidden")
+            .html("Add property")
+            .click(function() { appendNewSourcePropertyRow(sourceInfoTable); return false; }));
         
         // TODO: update the status message about this source
         $("#statusReport").append("Summary info goes here: how many trees, how many rooted/ingroup/etc, % taxon composition, etc.");
@@ -243,7 +251,7 @@ function displayTreeInfo(treeId) {
                 .attr("type", "button")
                 .addClass("hidden")
                 .html("Add property")
-                .click(function() { appendNewPropertyRow(treeTable); return false; }));
+                .click(function() { appendNewTreePropertyRow(treeTable); return false; }));
         
         $("#treeInfo")
             .append($("<h4>").append("Tree " + treeId))
@@ -284,7 +292,7 @@ function getFormTableRow(property, value, displayValue) {
     return row;
 }
 
-function appendNewPropertyRow(table) {
+function appendNewSourcePropertyRow(table) {
     
     formControl = $("<input>").addClass("form-control").attr("value","").attr("type","text");
     
@@ -295,12 +303,8 @@ function appendNewPropertyRow(table) {
                 .attr("type", "button")
                 .html("Remove")
                 .click(function() { removePropertyFromFormOnly(row); return false; } ))
-            .append($("<select>")
-                .append(getPropertyOptions())
-                .change(function() {
-                    var propertyName = $(row).find("select").val();
-                    $(row).find(".fieldCell .form-control").attr("name",propertyName);
-                })))
+            .append($(sourcePropertyDropdown).clone()
+                .change(function() { updateAddPropertyRow(row); })))
         .append($("<td>")
             .addClass("fieldCell")
             .append(formControl));
@@ -308,8 +312,56 @@ function appendNewPropertyRow(table) {
     $(table).append(row);
 }
 
-function getPropertyOptions() {
-    return "<option value=''>Select a property:</option><option value='Property 2'>Property 2</option>";
+function appendNewTreePropertyRow(table) {
+    
+//    formControl = $("<input>").addClass("form-control").attr("value","").attr("type","text");
+    
+    var row = $("<tr>")
+        .append($("<td>")
+            .attr("width","250px")
+            .append($("<button>")
+                .attr("type", "button")
+                .html("Remove")
+                .click(function() { removePropertyFromFormOnly(row); return false; } ))
+            .append($(treePropertyDropdown).clone()
+                .change(function() { updateAddPropertyRow(row); })))
+        .append($("<td>")
+            .addClass("fieldCell"));
+
+    $(table).append(row);
+}
+
+function updateAddPropertyRow(row) {
+    var propertyName = $(row).find("select").val();
+    
+    // for properties with free-form values
+    if ( !(propertyName in propertiesWithChoices)) {
+        $(row).find(".fieldCell")
+            .html($("<input>")
+                .addClass("form-control")
+                .attr("value","")
+                .attr("type","text")
+                .attr("name", propertyName));
+    
+    // for properties with preset choices
+    } else {
+        $(row).find(".fieldCell")
+            .html($(getDropdownForProperty(propertyName)));
+    }
+}
+
+function getDropdownForProperty(propertyName) {
+    // TODO: could pre-build these to make the page faster... payoff may not be much though since it isn't really slow
+    
+    var dropdown = $("<select>")
+        .addClass("form-control")
+        .attr("name",propertyName);
+    
+    $(propertiesWithChoices[propertyName]).each(function(i, choice) {
+        dropdown.append($("<option>").val(choice).html(choice));
+    });
+    
+    return dropdown;
 }
 
 function removePropertyFromFormOnly(row) {
@@ -452,11 +504,6 @@ function submitPropertyEdits(nodeId, propertyForm) {
     xhr.send(JSON.stringify({"keys": keys, "values": values, "types": types, "propertiesToRemove": propertiesToRemove}));
 }
 
-function editTreeInfo(treeId) {
-    alert("this will edit the tree metadata");
-    // replace the tree metadata view with a form, turn all the fields to input boxes
-    // submit the form to post to a property-updating service
-}
 
 function exportSource() {
     alert("this will export the source");
@@ -507,7 +554,15 @@ function deleteTree(treeId) {
 
 // ===== on page load
 
-var activeSourceId; // page global
+// page globals
+var activeSourceId;
+
+// we will create these elements once and then replicate them to save on server calls
+var sourcePropertyDropdown;
+var treePropertyDropdown;
+var propertiesWithChoices; // = {"ot:inferenceMethod": ["1","2","3"], "ot:branchLengthMode": ["1","2","3"]};
+
+
 $(document).ready(function() {
 
     // get the source id from the GET variables
@@ -525,7 +580,43 @@ $(document).ready(function() {
     populateSourceListDropdown();
     displaySourceInfo();
 
+    populatePropertiesLists();
+
 });
+
+function populatePropertiesLists() {
+
+    var sourcePropertiesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getSourceProperties";
+    var treePropertiesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getTreeProperties";
+    var presetChoicesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getChoicePresets";
+
+    // build the source property dropdown    
+    var xhr1 = getXhr(sourcePropertiesService, function() {
+        
+        sourcePropertyDropdown = $("<select>");
+        $(JSON.parse(xhr1.responseText)).each(function(i, property) {
+            sourcePropertyDropdown.append($("<option>").val(property).html(property));
+        });
+    });
+    xhr1.send();
+
+    // build the tree property dropdown
+    var xhr2 = getXhr(treePropertiesService, function() {
+
+        treePropertyDropdown = $("<select>");
+        $(JSON.parse(xhr2.responseText)).each(function(i, property) {
+            treePropertyDropdown.append($("<option>").val(property).html(property));
+        });
+    });
+    xhr2.send();
+    
+    // build the source property dropdown    
+    var xhr3 = getXhr(presetChoicesService, function() {
+        propertiesWithChoices = JSON.parse(xhr3.responseText);
+    }
+    xhr3.send();
+}
+
 
         </script>
     </body>

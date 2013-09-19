@@ -7,7 +7,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.opentree.graphdb.GraphDatabaseAgent;
 import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.properties.BasicType;
-import org.opentree.properties.OTProperty;
+import org.opentree.properties.OTPropertyPredicate;
 
 public class ConfigurationManager extends OTUDatabase {
 	
@@ -43,7 +43,7 @@ public class ConfigurationManager extends OTUDatabase {
 		return graphDb.getGraphProperty(OTUGraphProperty.valueOf(propertyName.toUpperCase()));
 	}
 	
-	public Object getGraphProperty(OTProperty property) {
+	public Object getGraphProperty(OTPropertyPredicate property) {
 		return graphDb.getGraphProperty(property);
 	}
 	
@@ -59,7 +59,7 @@ public class ConfigurationManager extends OTUDatabase {
 	
 	public void setGraphProperty(String propertyName, String value, String type) {		
 		BasicType basicType = BasicType.valueOf(type.toUpperCase());
-		OTProperty graphProperty = OTUGraphProperty.valueOf(propertyName.toUpperCase());
+		OTPropertyPredicate graphProperty = OTUGraphProperty.valueOf(propertyName.toUpperCase());
 		
 		graphDb.setGraphProperty(graphProperty.propertyName(), basicType.convertToValue(value));
 	}

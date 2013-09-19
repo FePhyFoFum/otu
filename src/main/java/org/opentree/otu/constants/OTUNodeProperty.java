@@ -1,17 +1,13 @@
 package org.opentree.otu.constants;
 
-import org.opentree.properties.OTProperty;
+import org.opentree.properties.OTPropertyPredicate;
 
 /**
  * Node properties specific to OTU. These are stored in graph nodes. Different types
- * of nodes may have different properties. For more information see:
- * 
- * https://github.com/OpenTreeOfLife/treemachine/wiki/Vocabulary
- * 
- * http://opentree.wikispaces.com/NexSON // TODO: bring in the rest of the terms from this document
+ * of nodes may have different properties.
  * 
  */
-public enum OTUNodeProperty implements OTProperty {
+public enum OTUNodeProperty implements OTPropertyPredicate {
 	
 	// TODO: switch as many of these as possible over to the nexson and ot: vocabulary properties as possible. waiting for that spec to stabilize to do so
 
@@ -86,7 +82,7 @@ public enum OTUNodeProperty implements OTProperty {
 	/**
 	 * The OTT id of the focal clade for this source. A phylografter property that we may never use.
 	 */
-	FOCAL_CLADE ("focal_clade_ott_id", String.class),
+	FOCAL_CLADE ("focal_clade_ott_id", String.class), // TODO: make this use the ot:focalClade property instead. Need nexson reader to apply this
 	
 	/**
 	 * A boolean indicating whether this tree has been rooted. Stored as a property of the root node. If the tree root lacks
@@ -156,12 +152,12 @@ public enum OTUNodeProperty implements OTProperty {
 	 * only be set on nodes that are actually part of the ingroup, implying that nodes without this property in trees that
 	 * have their ingroup set are thus part of the outgroup.
 	 */
-	IS_WITHIN_INGROUP ("within_ingroup", boolean.class),
+	IS_WITHIN_INGROUP ("within_ingroup", boolean.class);
 	
-	/**
+	/*
 	 * A property of OTU nodes only. For OTU nodes, this should be set to true. Any other node should never have this property.
-	 */
-	IS_OTU ("is_otu", boolean.class);
+	 *
+	IS_OTU ("is_otu", boolean.class); */ // TODO: use the ot:isOTU property instead
 	
 	private final String propertyName;
 	private final Class<?> type;

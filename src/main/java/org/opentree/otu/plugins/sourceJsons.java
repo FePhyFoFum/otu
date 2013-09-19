@@ -39,7 +39,7 @@ import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.DuplicateSourceException;
-import org.opentree.properties.OTVocabulary;
+import org.opentree.properties.OTVocabularyPredicate;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -230,8 +230,8 @@ public class sourceJsons extends ServerPlugin {
 		
 		GraphDatabaseService gds = node.getGraphDatabase();
 		DatabaseManager manager = new DatabaseManager(gds);
-		manager.setProperties(node, keys, values, types);
-		
+
+		// first remove all indicated properties
 		Transaction tx = gds.beginTx();
 		try {
 			if (propertiesToRemove != null) {
@@ -243,12 +243,42 @@ public class sourceJsons extends ServerPlugin {
 		} finally {
 			tx.finish();
 		}
+
+		// now set properties we have been told to set
+		manager.setProperties(node, keys, values, types);
 		
 		Map<String, Object> result = new HashMap<String, Object>();
 		result.put("event", "success");
 		return OTRepresentationConverter.convert(result);
 	}
 	
+	@Description("Report a list of available properties for source metadata nodes")
+	@PluginTarget(GraphDatabaseService.class)
+	public Representation getSourceProperties(@Source GraphDatabaseService graphDb) {
+		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
+		return OTRepresentationConverter.convert(browser.getAvailableSourceProperties());
+	}
+
+	@Description("Report a list of available properties for trees (i.e. tree root nodes)")
+	@PluginTarget(GraphDatabaseService.class)
+	public Representation getTreeProperties(@Source GraphDatabaseService graphDb) {
+		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
+		return OTRepresentationConverter.convert(browser.getAvailableTreeProperties());
+	}
+
+	@Description("Report a list of available properties for internal tree nodes")
+	@PluginTarget(GraphDatabaseService.class)
+	public Representation getTreeNodeProperties(@Source GraphDatabaseService graphDb) {
+		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
+		return OTRepresentationConverter.convert(browser.getAvailableTreeNodeProperties());
+	}
+
+	@Description("Report a map containing lists of presets for fixed-choice properties")
+	@PluginTarget(GraphDatabaseService.class)
+	public Representation getChoicePresets(@Source GraphDatabaseService graphDb) {
+		return OTRepresentationConverter.convert(OTUConstants.PROPERTIES_WITH_PRESETS_MAP());
+	}
+
 	/**
 	 * Assign a taxon to the node.
 	 * 
@@ -266,8 +296,8 @@ public class sourceJsons extends ServerPlugin {
 		DatabaseManager manager = new DatabaseManager(graphDb);
 		
 		Map<String, Object> properties = new HashMap<String, Object>();
-		properties.put(OTVocabulary.OT_OTT_ID.propertyName(), ottId);
-		properties.put(OTVocabulary.OT_OTT_TAXON_NAME.propertyName(), taxonName);
+		properties.put(OTVocabularyPredicate.OT_OTT_ID.propertyName(), ottId);
+		properties.put(OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName(), taxonName);
 		properties.put(OTUNodeProperty.NAME.propertyName(), taxonName);
 		
 		manager.setProperties(node, properties);

@@ -25,7 +25,7 @@ import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.DuplicateSourceException;
 import org.opentree.otu.exceptions.NoSuchTreeException;
 import org.opentree.properties.BasicType;
-import org.opentree.properties.OTVocabulary;
+import org.opentree.properties.OTVocabularyPredicate;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -156,7 +156,7 @@ public class DatabaseManager extends OTUDatabase {
 			String sourceId = source.getId();
 
 			// don't add a study if it already exists, unless overwriting is turned on
-			String property = location + OTUConstants.SOURCE_ID;
+			String property = location + OTUConstants.SOURCE_ID_SUFFIX;
 			sourceMeta = DatabaseUtils.getSingleNodeIndexHit(sourceMetaNodesBySourceId, property, sourceId);
 			if (sourceMeta != null) {
 				if (overwrite) {
@@ -217,7 +217,7 @@ public class DatabaseManager extends OTUDatabase {
 			} else { // remote study
 
 				// check if there is a local study to attach this remote one to
-				Node localSourceMeta = DatabaseUtils.getSingleNodeIndexHit(sourceMetaNodesBySourceId, LOCAL_LOCATION + OTUConstants.SOURCE_ID, sourceId);
+				Node localSourceMeta = DatabaseUtils.getSingleNodeIndexHit(sourceMetaNodesBySourceId, LOCAL_LOCATION + OTUConstants.SOURCE_ID_SUFFIX, sourceId);
 				if (localSourceMeta != null) {
 					localSourceMeta.createRelationshipTo(sourceMeta, OTURelType.LOCALCOPYOF);
 				}
@@ -694,12 +694,12 @@ public class DatabaseManager extends OTUDatabase {
 	public void connectTreeNodeToTaxonomy(Node node) {
 		
 		// nothing to be done if this node doesn't have an ottid
-		if (!node.hasProperty(OTVocabulary.OT_OTT_ID.propertyName())) {
+		if (!node.hasProperty(OTVocabularyPredicate.OT_OTT_ID.propertyName())) {
 			return;
 		}
 		
-		Long ottId = (Long) node.getProperty(OTVocabulary.OT_OTT_ID.propertyName());
-		Node taxonNode = DatabaseUtils.getSingleNodeIndexHit(taxonNodesByOTTId, OTVocabulary.OT_OTT_ID.propertyName(), ottId); // TODO: this should be consistent with the OTVcoabulary
+		Long ottId = (Long) node.getProperty(OTVocabularyPredicate.OT_OTT_ID.propertyName());
+		Node taxonNode = DatabaseUtils.getSingleNodeIndexHit(taxonNodesByOTTId, OTVocabularyPredicate.OT_OTT_ID.propertyName(), ottId); // TODO: this should be consistent with the OTVcoabulary
 		
 		if (taxonNode != null) {
 			
@@ -825,7 +825,7 @@ public class DatabaseManager extends OTUDatabase {
 		
 		// mark the tips as OTU nodes
 		if (curJadeNode.getChildCount() < 1) {
-			curGraphNode.setProperty(OTUNodeProperty.IS_OTU.propertyName(), true);
+			curGraphNode.setProperty(OTVocabularyPredicate.OT_IS_OTU.propertyName(), true);
 			
 			// for otu nodes, connect them to the taxonomy if it exists
 			if (config.hasTaxonomy()) {
@@ -862,16 +862,16 @@ public class DatabaseManager extends OTUDatabase {
 
 		for (JadeNode treeNode : tree.getRoot().getDescendantLeaves()) {
 
-			originalTaxonNames.add((String) treeNode.getObject(OTVocabulary.OT_ORIGINAL_LABEL.propertyName()));
+			originalTaxonNames.add((String) treeNode.getObject(OTVocabularyPredicate.OT_ORIGINAL_LABEL.propertyName()));
 
-			if (treeNode.hasAssocObject(OTVocabulary.OT_OTT_ID.propertyName())) {
+			if (treeNode.hasAssocObject(OTVocabularyPredicate.OT_OTT_ID.propertyName())) {
 				// If the node has not been explicitly mapped, we will not record the name as a mapped name
 				String name = treeNode.getName();
 				mappedTaxonNames.add(name);
 				mappedTaxonNamesNoSpaces.add(name.replace("\\s+", OTUConstants.WHITESPACE_SUBSTITUTE_FOR_SEARCH));
 			}
 
-			Long ottId = (Long) treeNode.getObject(OTVocabulary.OT_OTT_ID.propertyName());
+			Long ottId = (Long) treeNode.getObject(OTVocabularyPredicate.OT_OTT_ID.propertyName());
 			if (ottId != null) {
 				mappedOTTIds.add(ottId);
 			}
@@ -894,17 +894,17 @@ public class DatabaseManager extends OTUDatabase {
 
 		for (Node tip : DatabaseBrowser.getDescendantTips(node)) {
 
-			originalTaxonNames.add((String) tip.getProperty(OTVocabulary.OT_ORIGINAL_LABEL.propertyName()));
+			originalTaxonNames.add((String) tip.getProperty(OTVocabularyPredicate.OT_ORIGINAL_LABEL.propertyName()));
 
 			// only record explicit mapped names as mapped names
-			if (tip.hasProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName())) {
-				String name = (String) tip.getProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName());
+			if (tip.hasProperty(OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName())) {
+				String name = (String) tip.getProperty(OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName());
 				mappedTaxonNames.add(name);
 				mappedTaxonNamesNoSpaces.add(name.replace("\\s+", OTUConstants.WHITESPACE_SUBSTITUTE_FOR_SEARCH));
 			}
 
-			if (tip.hasProperty(OTVocabulary.OT_OTT_ID.propertyName())) {
-				Long ottId = (Long) tip.getProperty(OTVocabulary.OT_OTT_ID.propertyName());
+			if (tip.hasProperty(OTVocabularyPredicate.OT_OTT_ID.propertyName())) {
+				Long ottId = (Long) tip.getProperty(OTVocabularyPredicate.OT_OTT_ID.propertyName());
 				mappedOTTIds.add(ottId);
 			}
 		}

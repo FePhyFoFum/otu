@@ -36,8 +36,8 @@ import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.constants.SearchableProperty;
 import org.opentree.properties.JadeNodeProperty;
-import org.opentree.properties.OTProperty;
-import org.opentree.properties.OTVocabulary;
+import org.opentree.properties.OTPropertyPredicate;
+import org.opentree.properties.OTVocabularyPredicate;
 
 public class DatabaseBrowser extends OTUDatabase {
 	
@@ -45,37 +45,40 @@ public class DatabaseBrowser extends OTUDatabase {
 	public final Index<Node> treeRootNodesBySourceId = getNodeIndex(OTUNodeIndex.TREE_ROOT_NODES_BY_SOURCE_ID);
 	public final Index<Node> sourceMetaNodesBySourceId = getNodeIndex(OTUNodeIndex.SOURCE_METADATA_NODES_BY_SOURCE_ID);
 	
-	private static Set<String> protectedSourceProperties;
-	private static Set<String> protectedTreeProperties;
-	
+	private static Set<String> hiddenSourceProperties;
+	private static Set<String> hiddenTreeProperties;
+	private static Set<String> hiddenTreeNodeProperties;
+
+	private static Set<String> availableSourceProperties;
+	private static Set<String> availableTreeProperties;
+	private static Set<String> availableTreeNodeProperties;
+		
 	public DatabaseBrowser(EmbeddedGraphDatabase embeddedGraph) {
 		super(embeddedGraph);
 	}
 
 	public DatabaseBrowser(GraphDatabaseService gdbs) {
 		super(gdbs);
-		collectProtectedProperties();
+		collectPropertySets();
 	}
 
 	public DatabaseBrowser(GraphDatabaseAgent gdba) {
 		super(gdba);
-		collectProtectedProperties();
+		collectPropertySets();
 	}
 
-	private void collectProtectedProperties() {
-		
-		protectedSourceProperties = new HashSet<String>();
-		protectedTreeProperties = new HashSet<String>();
-		
-		for (OTProperty p : OTUConstants.PROTECTED_SOURCE_PROPERTIES) {
-			protectedSourceProperties.add(p.propertyName());
-		}
-
-		for (OTProperty p : OTUConstants.PROTECTED_TREE_PROPERTIES) {
-			protectedTreeProperties.add(p.propertyName());
-		}
+	public Iterable<String> getAvailableSourceProperties() {
+		return availableSourceProperties;
 	}
-	
+
+	public Iterable<String> getAvailableTreeProperties() {
+		return availableTreeProperties;
+	}
+
+	public Iterable<String> getAvailableTreeNodeProperties() {
+		return availableTreeNodeProperties;
+	}
+
 	/**
 	 * Search the indexes, and get a list of source ids that match the search
 	 * @param search
@@ -127,7 +130,7 @@ public class DatabaseBrowser extends OTUDatabase {
 	public List<Node> getRemoteSourceMetaNodesForSourceId(String sourceId) {
 		List<Node> remoteSourceMetasFound = new LinkedList<Node>();
 		for (String remote : getKnownRemotes()) {
-			Node sourceMeta = DatabaseUtils.getSingleNodeIndexHit(sourceMetaNodesBySourceId, remote + OTUConstants.SOURCE_ID, sourceId);
+			Node sourceMeta = DatabaseUtils.getSingleNodeIndexHit(sourceMetaNodesBySourceId, remote + OTUConstants.SOURCE_ID_SUFFIX, sourceId);
 			if (sourceMeta != null) {
 				remoteSourceMetasFound.add(sourceMeta);
 			}
@@ -165,7 +168,7 @@ public class DatabaseBrowser extends OTUDatabase {
 	public List<String> getSourceIds(String location, Set<String> excludedSourceIds) {
 		List<String> sourceIds = new LinkedList<String>();
 		
-		IndexHits<Node> sourcesFound = sourceMetaNodesBySourceId.query(location + OTUConstants.SOURCE_ID + ":*");
+		IndexHits<Node> sourcesFound = sourceMetaNodesBySourceId.query(location + OTUConstants.SOURCE_ID_SUFFIX + ":*");
 		try {
 			while (sourcesFound.hasNext()) {
 				String sid = (String) sourcesFound.next().getProperty(OTUNodeProperty.SOURCE_ID.propertyName());
@@ -196,7 +199,7 @@ public class DatabaseBrowser extends OTUDatabase {
 	
 		List<String> treeIds = new LinkedList<String>();
 		
-		IndexHits<Node> hits = treeRootNodesBySourceId.query(location + OTUConstants.SOURCE_ID + ":" + sourceId);
+		IndexHits<Node> hits = treeRootNodesBySourceId.query(location + OTUConstants.SOURCE_ID_SUFFIX + ":" + sourceId);
 		try {
 			while (hits.hasNext()) {
 				String tid = (String) hits.next().getProperty(OTUNodeProperty.TREE_ID.propertyName());
@@ -254,7 +257,7 @@ public class DatabaseBrowser extends OTUDatabase {
 	 * 		The metadata node for this source, or null if no such source exists
 	 */
 	public Node getSourceMetaNode(String sourceId, String location) {
-		return DatabaseUtils.getSingleNodeIndexHit(sourceMetaNodesBySourceId, location + OTUConstants.SOURCE_ID, sourceId);
+		return DatabaseUtils.getSingleNodeIndexHit(sourceMetaNodesBySourceId, location + OTUConstants.SOURCE_ID_SUFFIX, sourceId);
 	}
 	
 	/**
@@ -267,7 +270,7 @@ public class DatabaseBrowser extends OTUDatabase {
 	 * 		The root node for this tree, or null if no such tree exists
 	 */
 	public Node getTreeRootNode(String treeId, String location) {
-		return DatabaseUtils.getSingleNodeIndexHit(treeRootNodesByTreeId, location + OTUConstants.TREE_ID, treeId);
+		return DatabaseUtils.getSingleNodeIndexHit(treeRootNodesByTreeId, location + OTUConstants.TREE_ID_SUFFIX, treeId);
 	}
 	
 	/**
@@ -282,7 +285,7 @@ public class DatabaseBrowser extends OTUDatabase {
 		Map<String, Object> metadata = new HashMap<String, Object>();
 
 		// TODO: we may want to make this consistent with the  protected source property behavior tree root and source meta nodes
-		for (OTProperty property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
+		for (OTPropertyPredicate property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
 			if (otu.hasProperty(property.propertyName())) {
 				metadata.put(property.propertyName(), otu.getProperty(property.propertyName()));
 			}
@@ -310,7 +313,7 @@ public class DatabaseBrowser extends OTUDatabase {
 		Map<String, Object> metadata = new HashMap<String, Object>();
 		for (String key : sourceMeta.getPropertyKeys()) {
 
-			if (!protectedSourceProperties.contains(key)) {
+			if (!hiddenSourceProperties.contains(key)) {
 				
 				Object value = (Object) "";
 				if (sourceMeta.hasProperty(key)) {
@@ -367,7 +370,7 @@ public class DatabaseBrowser extends OTUDatabase {
 		Map<String, Object> metadata = new HashMap<String, Object>();
 		for (String key : root.getPropertyKeys()) {
 
-			if (!protectedTreeProperties.contains(key)) {
+			if (!hiddenTreeProperties.contains(key)) {
 
 				Object value = (Object) "";
 				if (root.hasProperty(key)) {
@@ -507,8 +510,8 @@ public class DatabaseBrowser extends OTUDatabase {
 				// curNode.setName(GeneralUtils.cleanName(curNode.getName()));
 			} */
 			
-			if (curGraphNode.hasProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName())) {
-				curNode.setName((String) curGraphNode.getProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName()));
+			if (curGraphNode.hasProperty(OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName())) {
+				curNode.setName((String) curGraphNode.getProperty(OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName()));
 				
 			} else if (curGraphNode.hasProperty(OTUNodeProperty.NAME.propertyName())) {
 				curNode.setName((String) curGraphNode.getProperty(OTUNodeProperty.NAME.propertyName()));				
@@ -518,7 +521,7 @@ public class DatabaseBrowser extends OTUDatabase {
 			curNode.assocObject(JadeNodeProperty.DISPLAY_PROPERTIES.propertyName(), OTUConstants.VISIBLE_JSON_TREE_PROPERTIES);
 
 			// include tnrs information if we need to
-			if (!curGraphNode.hasProperty(OTVocabulary.OT_OTT_ID.propertyName())) {
+			if (!curGraphNode.hasProperty(OTVocabularyPredicate.OT_OTT_ID.propertyName())) {
 
 				Iterable<Relationship> tnrsHitRels = curGraphNode.getRelationships(OTURelType.TNRSMATCHFOR);
 				List<Object> tnrsHits = new LinkedList<Object>();
@@ -538,7 +541,7 @@ public class DatabaseBrowser extends OTUDatabase {
 			}
 
 			// add properties suitable for the JSON
-			for (OTProperty property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
+			for (OTPropertyPredicate property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
 				if (curGraphNode.hasProperty(property.propertyName())) {
 					curNode.assocObject(property.propertyName(), curGraphNode.getProperty(property.propertyName()));
 				}
@@ -598,7 +601,7 @@ public class DatabaseBrowser extends OTUDatabase {
 				temproot.assocObject(JadeNodeProperty.DISPLAY_PROPERTIES.propertyName(), OTUConstants.VISIBLE_JSON_TREE_PROPERTIES);
 				
 				// add properties suitable for the JSON
-				for (OTProperty property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
+				for (OTPropertyPredicate property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
 					if (curGraphNode.hasProperty(property.propertyName())) {
 						temproot.assocObject(property.propertyName(), curGraphNode.getProperty(property.propertyName()));
 					}
@@ -617,4 +620,48 @@ public class DatabaseBrowser extends OTUDatabase {
 		// (add a bread crumb)
 		return new JadeTree(newroot);
 	}
+	
+	private void collectPropertySets() {
+		
+		hiddenSourceProperties = new HashSet<String>();
+		hiddenTreeProperties = new HashSet<String>();
+		hiddenTreeNodeProperties = new HashSet<String>();
+		availableSourceProperties = new HashSet<String>();
+		availableTreeProperties = new HashSet<String>();
+		availableTreeNodeProperties = new HashSet<String>();
+		
+		for (OTPropertyPredicate p : OTUConstants.HIDDEN_SOURCE_PROPERTIES) {
+			hiddenSourceProperties.add(p.propertyName());
+		}
+
+		for (OTPropertyPredicate p : OTUConstants.HIDDEN_TREE_PROPERTIES) {
+			hiddenTreeProperties.add(p.propertyName());
+		}
+		
+		for (OTPropertyPredicate p : OTUConstants.HIDDEN_TREE_NODE_PROPERTIES) {
+			hiddenTreeNodeProperties.add(p.propertyName());
+		}
+
+		for (OTPropertyPredicate p : OTUNodeProperty.values()) {
+			hiddenSourceProperties.add(p.propertyName());
+			hiddenTreeProperties.add(p.propertyName());
+			hiddenTreeNodeProperties.add(p.propertyName());
+		}
+		
+		for (OTPropertyPredicate p : OTVocabularyPredicate.values()) {
+			
+			if (!hiddenSourceProperties.contains(p.propertyName())) {
+				availableSourceProperties.add(p.propertyName());
+			}
+			
+			if (!hiddenTreeProperties.contains(p.propertyName())) {
+				availableTreeProperties.add(p.propertyName());
+			}
+
+			if (!hiddenTreeNodeProperties.contains(p.propertyName())) {
+				availableTreeNodeProperties.add(p.propertyName());
+			}
+		}
+	}
+	
 }

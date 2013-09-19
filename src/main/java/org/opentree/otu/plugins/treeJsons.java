@@ -30,7 +30,7 @@ import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.NoSuchTreeException;
-import org.opentree.properties.OTVocabulary;
+import org.opentree.properties.OTVocabularyPredicate;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -352,16 +352,16 @@ public class treeJsons extends ServerPlugin{
 	        	}
 	        	
 	        	// remove previous taxon matching info
-	        	otuNode.removeProperty(OTVocabulary.OT_OTT_ID.propertyName());
-	        	otuNode.removeProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName());
+	        	otuNode.removeProperty(OTVocabularyPredicate.OT_OTT_ID.propertyName());
+	        	otuNode.removeProperty(OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName());
 	        	
 	            // if there is an exact match, store the match info in the graph node
 	        	if (matches.size() == 1) {
 	        		JSONObject match = ((JSONObject) matches.get(0));
 	        		if ((Double) match.get("score") == 1.0) {
 	        				        			
-	        			otuNode.setProperty(OTVocabulary.OT_OTT_ID.propertyName(), Long.valueOf((String) match.get("matched_ott_id")));
-	        			otuNode.setProperty(OTVocabulary.OT_OTT_TAXON_NAME.propertyName(),  match.get("matched_name"));
+	        			otuNode.setProperty(OTVocabularyPredicate.OT_OTT_ID.propertyName(), Long.valueOf((String) match.get("matched_ott_id")));
+	        			otuNode.setProperty(OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName(),  match.get("matched_name"));
 
 	        			// attach to taxonomy if there is one
 	        			if (config.hasTaxonomy()) {

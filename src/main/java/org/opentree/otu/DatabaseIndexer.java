@@ -5,7 +5,7 @@ import org.opentree.otu.constants.OTUConstants;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.constants.SearchableProperty;
-import org.opentree.properties.OTVocabulary;
+import org.opentree.properties.OTVocabularyPredicate;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -49,7 +49,7 @@ public class DatabaseIndexer extends OTUDatabase {
 	 */
 	public void addSourceMetaNodeToIndexes(Node sourceMetaNode) {
 		sourceMetaNodesBySourceId.add(sourceMetaNode,
-				(String) sourceMetaNode.getProperty(OTUNodeProperty.LOCATION.propertyName())+OTUConstants.SOURCE_ID,
+				(String) sourceMetaNode.getProperty(OTUNodeProperty.LOCATION.propertyName())+OTUConstants.SOURCE_ID_SUFFIX,
 				sourceMetaNode.getProperty(OTUNodeProperty.SOURCE_ID.propertyName()));
 		indexNodeBySearchableProperties(sourceMetaNode, OTUConstants.SOURCE_PROPERTIES_FOR_SIMPLE_INDEXING);
 	}
@@ -73,11 +73,11 @@ public class DatabaseIndexer extends OTUDatabase {
 	public void addTreeRootNodeToIndexes(Node treeRootNode) {
 
 		treeRootNodesByTreeId.add(treeRootNode,
-				(String) treeRootNode.getProperty(OTUNodeProperty.LOCATION.propertyName()) + OTUConstants.TREE_ID,
+				(String) treeRootNode.getProperty(OTUNodeProperty.LOCATION.propertyName()) + OTUConstants.TREE_ID_SUFFIX,
 				treeRootNode.getProperty(OTUNodeProperty.TREE_ID.propertyName()));
 		
 		treeRootNodesBySourceId.add(treeRootNode,
-				(String) treeRootNode.getProperty(OTUNodeProperty.LOCATION.propertyName()) + OTUConstants.SOURCE_ID,
+				(String) treeRootNode.getProperty(OTUNodeProperty.LOCATION.propertyName()) + OTUConstants.SOURCE_ID_SUFFIX,
 				treeRootNode.getSingleRelationship(OTURelType.METADATAFOR, Direction.INCOMING)
 					.getEndNode().getProperty(OTUNodeProperty.SOURCE_ID.propertyName()));
 		
@@ -113,22 +113,22 @@ public class DatabaseIndexer extends OTUDatabase {
 		addStringArrayEntriesToIndex(root,
 				treeRootNodesByOriginalTaxonName,
 				OTUNodeProperty.DESCENDANT_ORIGINAL_TAXON_NAMES.propertyName(),
-				OTVocabulary.OT_ORIGINAL_LABEL.propertyName());
+				OTVocabularyPredicate.OT_ORIGINAL_LABEL.propertyName());
 
 		addStringArrayEntriesToIndex(root,
 				treeRootNodesByMappedTaxonName,
 				OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES.propertyName(),
-				OTVocabulary.OT_OTT_TAXON_NAME.propertyName());
+				OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName());
 		
 		addStringArrayEntriesToIndex(root,
 				treeRootNodesByMappedTaxonNameNoSpaces,
 				OTUNodeProperty.DESCENDANT_MAPPED_TAXON_NAMES_WHITESPACE_FILLED.propertyName(),
-				OTVocabulary.OT_OTT_TAXON_NAME.propertyName());
+				OTVocabularyPredicate.OT_OTT_TAXON_NAME.propertyName());
 		
 		addLongArrayEntriesToIndex(root,
 				treeRootNodesByMappedTaxonOTTId,
 				OTUNodeProperty.DESCENDANT_MAPPED_TAXON_OTT_IDS.propertyName(),
-				OTVocabulary.OT_OTT_ID.propertyName());
+				OTVocabularyPredicate.OT_OTT_ID.propertyName());
 	}
 	
 	// ===== generalized private methods used during indexing
