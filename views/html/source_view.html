@@ -296,13 +296,20 @@ function appendNewPropertyRow(table) {
                 .html("Remove")
                 .click(function() { removePropertyFromFormOnly(row); return false; } ))
             .append($("<select>")
-                .append($("<option>")
-                    .html("Property list"))))
+                .append(getPropertyOptions())
+                .change(function() {
+                    var propertyName = $(row).find("select").val();
+                    $(row).find(".fieldCell .form-control").attr("name",propertyName);
+                })))
         .append($("<td>")
             .addClass("fieldCell")
             .append(formControl));
 
     $(table).append(row);
+}
+
+function getPropertyOptions() {
+    return "<option value=''>Select a property:</option><option value='Property 2'>Property 2</option>";
 }
 
 function removePropertyFromFormOnly(row) {
@@ -312,7 +319,7 @@ function removePropertyFromFormOnly(row) {
 function hidePropertyAndMarkForDeletionFromDB(row) {
     
     var propertyName = $(row).children(".fieldCell").children(".form-control").attr("name");
-    alert(propertyName);
+//    alert(propertyName);
     
     var enclosingForm = $(row).parents("form");
     var toRemoveText = $(enclosingForm).children("[name='propertiesToRemove']").val();
@@ -323,7 +330,7 @@ function hidePropertyAndMarkForDeletionFromDB(row) {
         toRemoveArr.push(propertyName);
         toRemoveText = JSON.stringify(toRemoveArr);
     }
-    alert(toRemoveText);
+//    alert(toRemoveText);
     $(enclosingForm).children("[name='propertiesToRemove']").val(toRemoveText);
     
     $(row).removeClass(" doNotHide").addClass("hidden");
@@ -360,11 +367,6 @@ function toggleTreeEditForm(treeEditForm) {
 }
 
 function toggleEditForm(theForm) {
-
-/*    $(theForm).find(".editOnly").each(function(i, display) {
-        alert(display);
-        $(display).hasClass("hidden") ? $(display).removeClass(" hidden") : $(display).addClass(" hidden");
-    }); */
         
     $(theForm).find(".fieldCell .displayValue").each(function(i, display) {
         $(display).hasClass("hidden") ? $(display).removeClass(" hidden") : $(display).addClass(" hidden");
@@ -429,11 +431,14 @@ function submitPropertyEdits(nodeId, propertyForm) {
     var keys = [];
     var values = [];
     var types = [];
+
     $(propertyForm).find(".fieldCell .form-control").each(function(i, input) {
         if (! $(input).parents("tr").hasClass("hidden")) {
-            keys.push(input.name);
-            values.push(input.value);
-            types.push(typeof input.value);
+            if (input.name && input.name != "") {  
+                keys.push(input.name);
+                values.push(input.value);
+                types.push(typeof input.value);
+            }
         }
     });
 

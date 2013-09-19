@@ -35,6 +35,7 @@ public enum OTUConstants {
 		OTUNodeProperty.IS_WORKING_COPY,
 		OTUNodeProperty.IS_SAVED_COPY,
 		OTUNodeProperty.PROCESSED_BY_TNRS,
+		OTUNodeProperty.CONTEXT_NAME
 	};
 
 	/**
