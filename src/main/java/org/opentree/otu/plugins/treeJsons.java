@@ -294,7 +294,7 @@ public class treeJsons extends ServerPlugin{
 		ConfigurationManager config = new ConfigurationManager(graphDb);
         Transaction tx = graphDb.beginTx();
 		
-		// get ids and names and names to send to tnrs
+		// get ids and names to send to tnrs
 		LinkedList<Long> nodeIds = new LinkedList<Long>();
 		LinkedList<String> names = new LinkedList<String>();
 //		for (Node otu : DatabaseUtils.DESCENDANT_OTU_TRAVERSAL.traverse(root).nodes()) {
