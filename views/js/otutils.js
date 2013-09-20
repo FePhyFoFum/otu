@@ -1,9 +1,9 @@
 // ===== util methods
 
 // return an xhr with default settings
-function getXhr(url, callback, testing) {
+function getXhr(url, callback, testing, method) {
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", url, callback ? true : false);
+    xhr.open(method ? method : "POST", url, callback ? true : false);
     xhr.setRequestHeader("Accept", "");
     xhr.setRequestHeader("Content-Type","Application/json");
     if (callback) {
@@ -53,4 +53,12 @@ function getGraphProperty(pname, callback) {
         }
     });
     xhr.send(JSON.stringify({propertyName: pname}));
+}
+
+// Get the node id of the root node for a tree
+function getRootIdFromTreeId(treeId) {
+    var rootNodeService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getRootNodeIdForTreeId";
+    var xhr = getXhr(rootNodeService);
+    xhr.send(JSON.stringify({"treeId":treeId}));
+    return JSON.parse(xhr.responseText);
 }

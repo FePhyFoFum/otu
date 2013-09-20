@@ -34,11 +34,13 @@ import org.opentree.nexson.io.NexsonReader;
 import org.opentree.nexson.io.NexsonSource;
 import org.opentree.otu.DatabaseBrowser;
 import org.opentree.otu.DatabaseManager;
+import org.opentree.otu.constants.OTUConstants;
 import org.opentree.otu.OTUDatabaseUtils;
 import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.DuplicateSourceException;
+import org.opentree.properties.OTPropertyChoices;
 import org.opentree.properties.OTVocabularyPredicate;
 
 import com.sun.jersey.api.client.Client;
@@ -273,10 +275,14 @@ public class sourceJsons extends ServerPlugin {
 		return OTRepresentationConverter.convert(browser.getAvailableTreeNodeProperties());
 	}
 
-	@Description("Report a map containing lists of presets for fixed-choice properties")
+	@Description("Report a map containing lists of preset choices for fixed-choice properties")
 	@PluginTarget(GraphDatabaseService.class)
 	public Representation getChoicePresets(@Source GraphDatabaseService graphDb) {
-		return OTRepresentationConverter.convert(OTUConstants.PROPERTIES_WITH_PRESETS_MAP());
+		Map<String, Object> choices = new HashMap<String, Object>();
+		for (OTPropertyChoices p : OTPropertyChoices.values()) {
+			choices.put(p.propertyName(), p.choices());
+		}
+		return OTRepresentationConverter.convert(choices);
 	}
 
 	/**

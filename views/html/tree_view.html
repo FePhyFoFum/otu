@@ -789,13 +789,6 @@ $(document).click(function(event) {
 //
 //
 
-// Get the node id of the root node for a tree
-function getRootIdFromTreeId(treeId) {
-    var rootNodeService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getRootNodeIdForTreeId";
-    var xhr = getXhr(rootNodeService);
-    xhr.send(JSON.stringify({"treeId":treeId}));
-    return JSON.parse(xhr.responseText);
-}
 
 // Get the source id for a tree id
 function getSourceIdForTreeId(treeId) {

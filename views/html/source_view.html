@@ -69,6 +69,12 @@ body {
 } form .hidden {
     display: none !important;
     position: absolute !important;
+
+} .small {
+    font-size: 0.8em;
+    padding: 0 0.3em 0 0.3em;
+    margin-right: 0.6em ;
+    
 }
         </style>
     </head>
@@ -226,12 +232,53 @@ function displayTreeInfo(treeId) {
                 .append("Save changes")
                 .click(function() { submitTreeEditForm(treeId, formId) }))
             .append($("<div>")
-                .addClass("treeStatusReport")
-                .html("Summary info goes here: is working/saved, has mapped names, is rooted, has ingroup labeled, % taxon composition, etc."))
-;
+                .attr("id","treeStatusReport"+treeId));
 
-//        $(treeForm).append(treeHeader);
+        // get information about the root node
+        var rootNodeService="http://localhost:7474/db/data/node/"+getRootIdFromTreeId(treeId);
+        var xhr2 = getXhr(rootNodeService, function() {
+            var nodeInfo = JSON.parse(xhr2.responseText).data;
+            alert(JSON.stringify(nodeInfo));
             
+            var countNotMapped = nodeInfo.tip_original_names.length - nodeInfo.tip_mapped_ottids.length;
+            
+            var treeStatusReport = "Tree contains " + nodeInfo.tip_original_names.length + " tips";
+
+            if (countNotMapped > 0) {
+                treeStatusReport += ", <strong>" + countNotMapped + " of which are missing ott ids.</strong>";
+            } else {
+                treeStatusReport += ".";
+            }
+            
+            if (nodeInfo.context_name) {
+                treeStatusReport += " Taxonomic context is " + nodeInfo.context_name + ".";
+            } else {
+                treeStatusReport += " <strong>Taxonomic context is unknown.</strong>";
+            }
+            
+            if (nodeInfo.is_rooted) {
+                treeStatusReport += " Tree is rooted.";
+            } else {
+                treeStatusReport += " <strong>Tree is not rooted.</strong>";
+            }
+
+            if (nodeInfo.ingroup_is_set) {
+                treeStatusReport += " Ingroup is set.";
+            } else {
+                treeStatusReport += " <strong>Ingroup is not set.</strong>";
+            }
+
+            if (nodeInfo.is_working_copy) {
+                treeStatusReport += " <strong>This tree has unsaved changes.</strong>";
+            } else {
+                treeStatusReport += " There are no unsaved changes to this tree.";
+            }
+                        
+            $("#treeStatusReport"+treeId).html(treeStatusReport);
+            
+        }, false, "GET");
+        xhr2.send();
+
         // create the metadata table
         var keys = Object.keys(response.metadata);
         var treeTable = $(document.createElement("table"))
@@ -264,23 +311,32 @@ function displayTreeInfo(treeId) {
 // called by the form building functions
 function getFormTableRow(property, value, displayValue) {
 
-    // make hidden form elements to toggle for editing
+    // build the form element
     var formControl;
-    if (value.length < 80 || value.length == undefined) {
-        formControl = $("<input>").attr("value",value).attr("type","text");
+    if ( !(property in propertiesWithChoices)) {
+        // for properties with free-form values
+        if (value.length < 80 || value.length == undefined) {
+            formControl = $("<input>").attr("value",value).attr("type","text");
+        } else {
+            formControl = $("<textarea>").append(value);
+        }
+
     } else {
-        formControl = $("<textarea>").append(value);
+        // for properties with preset choices
+        formControl = getChoicesDropdownForProperty(property, value);
     }
+
+    // mark the form control for toggling and retrieving infomation when submitting
     $(formControl).addClass("form-control hidden").attr("name", property);
     
     // create a row for this property
     var row = $("<tr>")
         .addClass("doNotHide")
         .append($("<td>")
-            .attr("width","250px")
+            .attr("width","300px")
             .append($("<button>")
                 .attr("type", "button")
-                .addClass("hidden")
+                .addClass("small hidden")
                 .html("Remove")
                 .click(function() { hidePropertyAndMarkForDeletionFromDB(row); return false; } ))
             .append(property))
@@ -298,7 +354,7 @@ function appendNewSourcePropertyRow(table) {
     
     var row = $("<tr>")
         .append($("<td>")
-            .attr("width","250px")
+            .attr("width","300px")
             .append($("<button>")
                 .attr("type", "button")
                 .html("Remove")
@@ -318,7 +374,7 @@ function appendNewTreePropertyRow(table) {
     
     var row = $("<tr>")
         .append($("<td>")
-            .attr("width","250px")
+            .attr("width","300px")
             .append($("<button>")
                 .attr("type", "button")
                 .html("Remove")
@@ -346,11 +402,11 @@ function updateAddPropertyRow(row) {
     // for properties with preset choices
     } else {
         $(row).find(".fieldCell")
-            .html($(getDropdownForProperty(propertyName)));
+            .html($(getChoicesDropdownForProperty(propertyName)));
     }
 }
 
-function getDropdownForProperty(propertyName) {
+function getChoicesDropdownForProperty(propertyName, value) {
     // TODO: could pre-build these to make the page faster... payoff may not be much though since it isn't really slow
     
     var dropdown = $("<select>")
@@ -358,7 +414,13 @@ function getDropdownForProperty(propertyName) {
         .attr("name",propertyName);
     
     $(propertiesWithChoices[propertyName]).each(function(i, choice) {
-        dropdown.append($("<option>").val(choice).html(choice));
+        var option = $("<option>")
+            .val(choice)
+            .html(choice);
+        if (choice == value) {
+            option.attr("selected","selected");
+        }
+        dropdown.append(option);
     });
     
     return dropdown;
@@ -578,43 +640,52 @@ $(document).ready(function() {
     }
     
     populateSourceListDropdown();
-    displaySourceInfo();
-
-    populatePropertiesLists();
+    buildPresetsAndCallPageSetup();
 
 });
 
-function populatePropertiesLists() {
+function buildPresetsAndCallPageSetup() {
 
-    var sourcePropertiesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getSourceProperties";
-    var treePropertiesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getTreeProperties";
-    var presetChoicesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getChoicePresets";
+    sourcePropertyDropdown = null;
+    treePropertyDropdown = null;
+    propertiesWithChoices = null; 
+
+    // we use nested ajax calls to make sure required elements/info are loaded before we generate the forms
 
     // build the source property dropdown    
+    var sourcePropertiesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getSourceProperties";
     var xhr1 = getXhr(sourcePropertiesService, function() {
         
         sourcePropertyDropdown = $("<select>");
         $(JSON.parse(xhr1.responseText)).each(function(i, property) {
             sourcePropertyDropdown.append($("<option>").val(property).html(property));
         });
+
+        // build the tree property dropdown
+        var treePropertiesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getTreeProperties";
+        var xhr2 = getXhr(treePropertiesService, function() {
+
+            treePropertyDropdown = $("<select>");
+            $(JSON.parse(xhr2.responseText)).each(function(i, property) {
+                treePropertyDropdown.append($("<option>").val(property).html(property));
+            });
+        
+            // get lists of preset choices for properties that have them
+            var presetChoicesService = "http://localhost:7474/db/data/ext/sourceJsons/graphdb/getChoicePresets";
+            var xhr3 = getXhr(presetChoicesService, function() {
+                propertiesWithChoices = JSON.parse(xhr3.responseText);
+                
+                // HERE we actually display the page
+                displaySourceInfo();
+
+            });
+            xhr3.send();
+        
+        });
+        xhr2.send();
+    
     });
     xhr1.send();
-
-    // build the tree property dropdown
-    var xhr2 = getXhr(treePropertiesService, function() {
-
-        treePropertyDropdown = $("<select>");
-        $(JSON.parse(xhr2.responseText)).each(function(i, property) {
-            treePropertyDropdown.append($("<option>").val(property).html(property));
-        });
-    });
-    xhr2.send();
-    
-    // build the source property dropdown    
-    var xhr3 = getXhr(presetChoicesService, function() {
-        propertiesWithChoices = JSON.parse(xhr3.responseText);
-    }
-    xhr3.send();
 }
 
 

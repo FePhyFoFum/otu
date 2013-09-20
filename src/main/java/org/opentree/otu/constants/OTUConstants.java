@@ -70,7 +70,9 @@ IS_WITHIN_INGROUP
     OT_YEAR
  */
 
-public class OTUConstants {
+public enum OTUConstants {
+	
+	;
 
 	public static final String SOURCE_ID_SUFFIX = "SourceId";
 	public static final String TREE_ID_SUFFIX = "TreeId";
