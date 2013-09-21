@@ -234,15 +234,11 @@ public class DatabaseBrowser extends OTUDatabase {
 	 * @return
 	 * 		A set containing the nodes found by the tree traversal. Returns an empty set if no nodes are found.
 	 */
-	public static Set<Node> getDescendantTips(Node ancestor) { // does not appear to be used.
+	public static Set<Node> getDescendantTips(Node ancestor) {
 		HashSet<Node> descendantTips = new HashSet<Node>();
 		
-//		TraversalDescription CHILDOF_TRAVERSAL = Traversal.description().relationships(OTURelType.CHILDOF, Direction.INCOMING);
-//		for (Node curGraphNode: CHILDOF_TRAVERSAL.breadthFirst().traverse(ancestor).nodes()) {
 		for (Node curGraphNode : DatabaseUtils.descendantTipTraversal(OTURelType.CHILDOF, Direction.INCOMING).traverse(ancestor).nodes()) {
-//			if (curGraphNode.hasProperty(OTUNodeProperty.IS_OTU.propertyName())) { // what is this? should this be "otu"?
-				descendantTips.add(curGraphNode);
-//			}
+			descendantTips.add(curGraphNode);
 		}
 		return descendantTips;
 	}
@@ -423,10 +419,6 @@ public class DatabaseBrowser extends OTUDatabase {
 
 		Iterable<Relationship> tnrsRels = otuNode.getRelationships(OTURelType.TNRSMATCHFOR, Direction.INCOMING);
 		
-/*		if (!tnrsRels.iterator().hasNext()) {
-			return null;
-		} */
-				
 		// return description of these nodes
 		List< Map<String, Object>> scores = new ArrayList< Map<String, Object>>();
 		Map<String, Object> matches = new HashMap<String, Object>();
@@ -568,11 +560,11 @@ public class DatabaseBrowser extends OTUDatabase {
 				parentJadeNode.addChild(curNode);
 			}
 			
-			// get the immediate synth children of the current node
-			LinkedList<Relationship> taxChildRels = new LinkedList<Relationship>();
+			// get the immediate children of the current node
+//			LinkedList<Relationship> childRels = new LinkedList<Relationship>();
 			int numchild = 0;
-			for (Relationship taxChildRel : curGraphNode.getRelationships(Direction.INCOMING, OTURelType.CHILDOF)) {
-				taxChildRels.add(taxChildRel);
+			for (Relationship childRel : curGraphNode.getRelationships(Direction.INCOMING, OTURelType.CHILDOF)) {
+//				childRels.add(childRel);
 				numchild += 1;
 			}
 			if (numchild > 0) {
@@ -583,42 +575,41 @@ public class DatabaseBrowser extends OTUDatabase {
 			}
 		}
 		
-		int curbackcount = 0;
+		int nRootCrumbsAdded = 0;
 		boolean going = true;
-		JadeNode newroot = root;
-		Node curRoot = inRoot;
-		while (going && curbackcount < 5) {
-			if (curRoot.hasRelationship(Direction.OUTGOING, OTURelType.CHILDOF)) {
-				Node curGraphNode = curRoot.getSingleRelationship(OTURelType.CHILDOF, Direction.OUTGOING).getEndNode();
-				JadeNode temproot = new JadeNode();
+		JadeNode curJadeRoot = root;
+		Node curGraphRoot = inRoot;
+		while (going && nRootCrumbsAdded < 5) {
+			if (curGraphRoot.hasRelationship(Direction.OUTGOING, OTURelType.CHILDOF)) {
+				Node graphRootParent = curGraphRoot.getSingleRelationship(OTURelType.CHILDOF, Direction.OUTGOING).getEndNode();
+				JadeNode jadeRootParent = new JadeNode();
 
 				// TODO: should make method that adds properties out of the graph to a jadenode and use it here as well as above.
-				if (curGraphNode.hasProperty(OTUNodeProperty.NAME.propertyName())) {
-					temproot.setName(GeneralUtils.cleanName(String.valueOf(curGraphNode.getProperty(OTUNodeProperty.NAME.propertyName()))));
+				if (graphRootParent.hasProperty(OTUNodeProperty.NAME.propertyName())) {
+					jadeRootParent.setName(GeneralUtils.cleanName(String.valueOf(graphRootParent.getProperty(OTUNodeProperty.NAME.propertyName()))));
 				}
 
-				temproot.assocObject(OTUNodeProperty.NODE_ID.propertyName(), curGraphNode.getId());
-				temproot.assocObject(JadeNodeProperty.DISPLAY_PROPERTIES.propertyName(), OTUConstants.VISIBLE_JSON_TREE_PROPERTIES);
+				jadeRootParent.assocObject(OTUNodeProperty.NODE_ID.propertyName(), graphRootParent.getId());
+				jadeRootParent.assocObject(JadeNodeProperty.DISPLAY_PROPERTIES.propertyName(), OTUConstants.VISIBLE_JSON_TREE_PROPERTIES);
 				
 				// add properties suitable for the JSON
 				for (OTPropertyPredicate property : OTUConstants.VISIBLE_JSON_TREE_PROPERTIES) {
-					if (curGraphNode.hasProperty(property.propertyName())) {
-						temproot.assocObject(property.propertyName(), curGraphNode.getProperty(property.propertyName()));
+					if (graphRootParent.hasProperty(property.propertyName())) {
+						jadeRootParent.assocObject(property.propertyName(), graphRootParent.getProperty(property.propertyName()));
 					}
 				}
 				
-				temproot.addChild(newroot);
-				curRoot = curGraphNode;
-				newroot = temproot;
-				curbackcount += 1;
+				jadeRootParent.addChild(curJadeRoot);
+				curGraphRoot = graphRootParent;
+				curJadeRoot = jadeRootParent;
+				nRootCrumbsAdded++;
 			} else {
 				going = false;
 				break;
 			}
 		}
 		
-		// (add a bread crumb)
-		return new JadeTree(newroot);
+		return new JadeTree(curJadeRoot);
 	}
 	
 	private void collectPropertySets() {

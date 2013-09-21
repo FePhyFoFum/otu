@@ -193,7 +193,7 @@ public class DatabaseManager extends OTUDatabase {
 				}
 
 				// get the tree id from the nexson if there is one or create an arbitrary one if not
-				String treeIdSuffix = (String) tree.getObject("id");
+				String treeIdSuffix = (String) tree.getObject(OTUNodeProperty.PHYLOGRAFTER_ID.propertyName());
 				if (treeIdSuffix ==  null) {
 					treeIdSuffix = OTUConstants.LOCAL_TREEID_PREFIX + /* .value + */ String.valueOf(i);
 				}
@@ -578,7 +578,6 @@ public class DatabaseManager extends OTUDatabase {
 		Node actualRoot = null;
 		String treeID = null;
 		treeID = (String) oldRoot.getProperty(OTUNodeProperty.TREE_ID.propertyName());
-//		Transaction tx = graphDb.beginTx();
 		try {
 			// tritomy the root
 			int oldrootchildcount = DatabaseUtils.getNumberOfRelationships(oldRoot, OTURelType.CHILDOF, Direction.INCOMING);
@@ -606,11 +605,10 @@ public class DatabaseManager extends OTUDatabase {
 			Relationship prevStudyToTreeRootLinkRel = oldRoot.getSingleRelationship(OTURelType.METADATAFOR, Direction.INCOMING);
 			Node metadata = prevStudyToTreeRootLinkRel.getStartNode();
 			prevStudyToTreeRootLinkRel.delete();
-		
-			actualRoot.setProperty(OTUNodeProperty.TREE_ID.propertyName(), treeID);
-
 			metadata.createRelationshipTo(actualRoot, OTURelType.METADATAFOR);
-			
+		
+//			actualRoot.setProperty(OTUNodeProperty.TREE_ID.propertyName(), treeID);
+
 			// disconnect the current root from the saved copy of this tree
 			Relationship workingCopyRel = oldRoot.getSingleRelationship(OTURelType.WORKINGCOPYOF, Direction.OUTGOING);
 			Node rootNodeOfOriginalCopy = workingCopyRel.getEndNode();
@@ -618,6 +616,7 @@ public class DatabaseManager extends OTUDatabase {
 			
 			// clean up properties
 			DatabaseUtils.exchangeAllProperties(oldRoot, actualRoot); // TODO: are there properties we don't want to exchange?
+			actualRoot.setProperty(OTUNodeProperty.ROOTING_IS_SET.propertyName(), true);
 			
 			// update indexes
 			indexer.removeTreeRootNodeFromIndexes(oldRoot);

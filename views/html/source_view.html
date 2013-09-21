@@ -232,46 +232,51 @@ function displayTreeInfo(treeId) {
                 .append("Save changes")
                 .click(function() { submitTreeEditForm(treeId, formId) }))
             .append($("<div>")
+                .addClass("treeStatusReport")
                 .attr("id","treeStatusReport"+treeId));
 
         // get information about the root node
         var rootNodeService="http://localhost:7474/db/data/node/"+getRootIdFromTreeId(treeId);
         var xhr2 = getXhr(rootNodeService, function() {
             var nodeInfo = JSON.parse(xhr2.responseText).data;
-            alert(JSON.stringify(nodeInfo));
+//            alert(JSON.stringify(nodeInfo));
             
             var countNotMapped = nodeInfo.tip_original_names.length - nodeInfo.tip_mapped_ottids.length;
             
             var treeStatusReport = "Tree contains " + nodeInfo.tip_original_names.length + " tips";
 
             if (countNotMapped > 0) {
-                treeStatusReport += ", <strong>" + countNotMapped + " of which are missing ott ids.</strong>";
+                treeStatusReport += ", <span class='warning'>" + countNotMapped + " of which are missing ott ids.</span>";
             } else {
-                treeStatusReport += ".";
+                treeStatusReport += ", all of which have OTT ids.";
             }
             
             if (nodeInfo.context_name) {
-                treeStatusReport += " Taxonomic context is " + nodeInfo.context_name + ".";
+                if (nodeInfo.context_name == "All life") {
+                    treeStatusReport += "<br/><span class='warning-weak'>Taxonomic context is " + nodeInfo.context_name + ".</span>";
+                } else {
+                    treeStatusReport += "<br/>Taxonomic context is " + nodeInfo.context_name + ".";
+                }
             } else {
-                treeStatusReport += " <strong>Taxonomic context is unknown.</strong>";
+                treeStatusReport += "<br/><span class='warning-strong'>Taxonomic context is unknown.</span>";
             }
             
             if (nodeInfo.is_rooted) {
-                treeStatusReport += " Tree is rooted.";
+                treeStatusReport += "<br/>Tree is rooted.";
             } else {
-                treeStatusReport += " <strong>Tree is not rooted.</strong>";
+                treeStatusReport += "<br/><span class='warning-strong'>Tree is not rooted.</span>";
             }
 
             if (nodeInfo.ingroup_is_set) {
-                treeStatusReport += " Ingroup is set.";
+                treeStatusReport += "<br/>Ingroup is set.";
             } else {
-                treeStatusReport += " <strong>Ingroup is not set.</strong>";
+                treeStatusReport += "<br/><span class='warning-strong'>Ingroup is not set.</span>";
             }
 
             if (nodeInfo.is_working_copy) {
-                treeStatusReport += " <strong>This tree has unsaved changes.</strong>";
+                treeStatusReport += "<br/><span class='warning-strong'>This tree has unsaved changes.</span>";
             } else {
-                treeStatusReport += " There are no unsaved changes to this tree.";
+                treeStatusReport += "<br/>There are no unsaved changes to this tree.";
             }
                         
             $("#treeStatusReport"+treeId).html(treeStatusReport);
@@ -290,6 +295,10 @@ function displayTreeInfo(treeId) {
             var value = response.metadata[property];
             $(treeTable).append(getFormTableRow(property, value));
         });
+        
+        if (keys.length < 1) {
+            $(treeTable).append($("<tr>").append($("<td>").append($("<h5>").html("No metadata"))));
+        }
         
         // add the tree metadata to the page
         $(treeForm)
@@ -568,11 +577,11 @@ function submitPropertyEdits(nodeId, propertyForm) {
 
 
 function exportSource() {
-    alert("this will export the source");
+    alert("this will export the source locally");
 }
 
 function pushSource() {
-    alert("this will push the source (after comparing to the git)");
+    alert("this will push changes to the remote");
 }
 
 function deleteSourceLocal() {
@@ -584,7 +593,7 @@ function deleteSourceLocal() {
     xhr = getXhr(deleteLocalSourceService, function() {
 //        var response = JSON.parse(xhr.responseText);
         var confirmForm = $(document.createElement("form"))
-            .attr("action", "load_sources.py")
+            .attr("action", "import.py")
             .attr("method", "POST")
             .append($(document.createElement("input"))
                 .attr("type", "hidden")
@@ -598,7 +607,7 @@ function deleteSourceLocal() {
 }
 
 function deleteSourceGit() {
-    alert("this will delete the source from git. There should be a very explicit and terrifying warning and at least one level of confirmation required to do this. Would also be good to have people re-enter their password");
+    alert("this will delete the source from the remote. There should be a very explicit and terrifying warning and at least one level of confirmation required to do this.");
 }
 
 function deleteTree(treeId) {

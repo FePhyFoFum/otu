@@ -41,6 +41,7 @@
                 </fieldset>
             </form>
         </div>
+        $EVENT_HTML$
         <script>
 
 ///////////////////////////////////
@@ -99,7 +100,7 @@ function getConf(){
 //
 //
 
-function loadOTT() {
+function loadOTT(ottFilePath) {
 
     var installOTTService = "http://localhost:7474/db/data/ext/ConfigurationPlugins/graphdb/installOTT";
     var xhr = getXhr(installOTTService, function() {
@@ -114,8 +115,8 @@ function loadOTT() {
     
     // TODO: make this variable set by a python script that will download the OTT file.
     // Call this function on page load as a callback if some incoming form variable indicates to do so.
-    xhr.send(JSON.stringify({taxonomyFile:"/home/cody/phylo/data/ott2.2/taxonomy"}));
-    $("#statusMessage").html("<p>Your request to load the taxonomy has been submitted. This will take some time. This page will be updated when the load is complete. Please leave this page open.</p>");
+    xhr.send(JSON.stringify({taxonomyFile:ottFilePath}));
+    $("#statusMessage").html("<p>The taxonomy has been downloaded and is being loaded into the database. This will take some time. This page will be updated when the load is complete. Please leave this page open.</p>");
 }
 
 function connectExistingTreesToOTT() {
@@ -138,6 +139,11 @@ function updateLoadOTTForm(response) {
     }
 }
 
+function initiateDownload() {
+    alert("Your request to load the taxonomy has been received. First, the taxonomy will be downloaded to your local Downloads folder (look for a file called ott2.2.tar.gz). This could take a while--you may notice your web browser indicating that this page is loading or 'waiting for localhost' while the download completes.\n\nOnce the download is finished, this page will reload, and a status message indicating that the taxonomy is being loaded will appear. Please be patient! Do not close this page until the loading is complete.");
+    window.location.replace("conf.py?download_ott_and_initiate_install=true");
+}
+
 ///////////////////////////////////
 //
 //
@@ -146,10 +152,18 @@ function updateLoadOTTForm(response) {
 //
 //
 
+//var ottFilePath = "/home/cody/phylo/data/ott2.2/taxonomy"; // temporary, until downloading is set up
+
 $(document).ready(function() {
     
+    // load the taxonomy if the path to a local taxonomy file has been provided
+    var ottPath = getQueryVariable('ott_path');
+    if (ottPath) {
+        loadOTT(ottPath);
+    }
+    
     // activate load ott button
-    $("#loadOTTButton").click(loadOTT);
+    $("#loadOTTButton").click(initiateDownload);
     
     getGraphProperty("has_taxonomy", updateLoadOTTForm);
     

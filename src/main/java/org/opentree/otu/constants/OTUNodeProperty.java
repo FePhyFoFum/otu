@@ -50,8 +50,7 @@ public enum OTUNodeProperty implements OTPropertyPredicate {
 	 * The id of the graph node. This is referenced when storing graph node ids in JadeNode objects for display in the browser.
 	 */
 	NODE_ID ("id", Long.class),
-
-	
+		
 	// ===== tree root nodes
 
 	/**
@@ -137,9 +136,9 @@ public enum OTUNodeProperty implements OTPropertyPredicate {
 	NEXSON_ID ("nexsonid", String.class),
 
 	/**
-	 * An id property used by phylografter. Not relevant to OTU, but we include it here to allow us to hide it when returning metadata.
+	 * An id property used by phylografter. We assign these values to incoming trees, and also hide these properties when returning metadata.
 	 */
-	PHYLOGRAFTER_ID ("id", long.class),
+	PHYLOGRAFTER_ID ("phylografter_id", long.class),
 	
 	/**
 	 * A flag specifying that the clade represented by the node is the ingroup for the tree. Is only set on the root node

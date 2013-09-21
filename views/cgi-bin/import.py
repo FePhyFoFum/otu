@@ -210,10 +210,10 @@ if result["event"] == ADDED:
     message = '<p class="highlight">Added source ' + result["sourceId"] + ' to the database. <a href="source_view.py?sourceId=' + result["sourceId"] + '">Click here to edit this source</a>.</p>'
 
 elif result["event"] == SUCCESS:
-    message = '<p class="success">'+result["message"]+'</p>'
+    message = '<p class="warning-weak">'+result["message"]+'</p>'
     
 elif result["event"] == WARNING:
-    message = '<p class="warning">'+result["message"]+'</p>'
+    message = '<p class="warning-strong">'+result["message"]+'</p>'
     
 
 # display the page

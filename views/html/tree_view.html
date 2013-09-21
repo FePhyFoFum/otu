@@ -230,6 +230,7 @@ function setupTree(nodeId) {
     rootNodeId = nodeId;
     var treeJSONService = "http://localhost:7474/db/data/ext/treeJsons/graphdb/getTreeJson";
     var xhr = getXhr(treeJSONService, function() {
+//        alert(xhr.responseText);
         d3.json("", function(error, flare) {
             root = JSON.parse(xhr.responseText);
             root.x0 = height / 2;
@@ -242,10 +243,6 @@ function setupTree(nodeId) {
         
     xhr.send(JSON.stringify({"nodeId": nodeId}));
 }
-
-//var tnrsResultsById = {}; // the latest TNRS results
-//var taxonMappings = {}; // changes to be sent to the db
-//var processedByTNRS;
 
 // Create the tree from the JSON
 function update(source) {
@@ -484,7 +481,7 @@ function updateNodeEditor(node) {
     // what follows is for otu nodes, could have a different case for internal nodes
 
     // name
-    var name = node["ot:ottTaxonName"] ? node["ot:ottTaxonName"] : node["name"]; // todo: switch this to original label? Need to wait until peter implements the ot:ottTaxonName
+    var name = node["ot:ottTaxonName"] ? node["ot:ottTaxonName"] : node["name"];
     $(nodeEditor).append("<h3>"+name+"</h3>");
 
     // original label
