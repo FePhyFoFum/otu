@@ -103,6 +103,9 @@ public class ConfigurationPlugins extends ServerPlugin {
 			@Description( "Taxonomy file")
 			@Parameter(name = "taxonomyFile", optional = false) String taxonomyFile) {
 
+		GraphDatabaseAgent gdb = new GraphDatabaseAgent(graphDb);
+		gdb.setGraphProperty(OTUGraphProperty.TAXONOMY_IS_LOADING.propertyName(), true);
+		
 		TaxonomyLoaderOTT loader = new TaxonomyLoaderOTT(graphDb);
 
 		// turn off unnecessary features
@@ -116,8 +119,8 @@ public class ConfigurationPlugins extends ServerPlugin {
 		
 		loader.loadOTTIntoGraph("ott", taxonomyFile, "");
 		
-		GraphDatabaseAgent gdb = new GraphDatabaseAgent(graphDb);
 		gdb.setGraphProperty(OTUGraphProperty.HAS_TAXONOMY.propertyName(), true);
+		gdb.removeGraphProperty(OTUGraphProperty.TAXONOMY_IS_LOADING);
 		
 		Map<String, Object> results = new HashMap<String, Object>();
 		results.put("event", "success");

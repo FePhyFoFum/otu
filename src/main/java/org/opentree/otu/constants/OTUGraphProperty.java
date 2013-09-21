@@ -13,7 +13,10 @@ public enum OTUGraphProperty implements OTPropertyPredicate {
 
 	/** An array containing the names for all known remotes. To facilitate multiple remotes */
 	KNOWN_REMOTES ("known_remotes", String[].class),
-	
+
+	/** Set to true while the taxonomy is loading so that it can be reported to the OTU web pages */
+	TAXONOMY_IS_LOADING ("taxonomy_is_loading", boolean.class),
+
 	/** Whether or not the taxonomy has been installed into the OTU db */
 	HAS_TAXONOMY ("has_taxonomy", boolean.class);
 

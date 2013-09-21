@@ -111,12 +111,12 @@ function loadOTT(ottFilePath) {
                 $("#statusMessage").html("<p>OTT was loaded successfully.</p>");
             });
         }
-    }, true);
+    });
     
     // TODO: make this variable set by a python script that will download the OTT file.
     // Call this function on page load as a callback if some incoming form variable indicates to do so.
     xhr.send(JSON.stringify({taxonomyFile:ottFilePath}));
-    $("#statusMessage").html("<p>The taxonomy has been downloaded and is being loaded into the database. This will take some time. This page will be updated when the load is complete. Please leave this page open.</p>");
+    $("#statusMessage").html("<p>The taxonomy has been downloaded and is being loaded into the database. This will take some time. If you leave this page open, it will be updated with a message when the load is complete. Alternatively, you may close this page and return later to check the status of the load operation.</p>");
 }
 
 function connectExistingTreesToOTT() {
@@ -133,6 +133,15 @@ function connectExistingTreesToOTT() {
 }
 
 function updateLoadOTTForm(response) {
+
+    if (response["taxonomy_is_loading"] == true) {
+        $("#statusMessage").html("The OTT taxonomy is currently being loaded. You may refresh this page to check this status again.");
+        return;
+
+    } else {
+        getGraphProperty("has_taxonomy", updateLoadOTTForm);
+    }
+
     if (response["has_taxonomy"] == true) {
         $("#statusMessage").html("The OTT taxonomy has already been loaded.");
         $("#loadOTTButton").addClass(" disabled").attr("disabled","disabled").unnbind("click");
@@ -140,7 +149,7 @@ function updateLoadOTTForm(response) {
 }
 
 function initiateDownload() {
-    alert("Your request to load the taxonomy has been received. First, the taxonomy will be downloaded to your local Downloads folder (look for a file called ott2.2.tar.gz). This could take a while--you may notice your web browser indicating that this page is loading or 'waiting for localhost' while the download completes.\n\nOnce the download is finished, this page will reload, and a status message indicating that the taxonomy is being loaded will appear. Please be patient! Do not close this page until the loading is complete.");
+    alert("Your request to load the taxonomy has been received. First, the taxonomy will be downloaded to your local Downloads folder (look for a file called ott2.2.tar.gz). This could take a while--you may notice your web browser indicating that this page is loading or 'waiting for localhost' while the file downloads. You must keep this window open to allow the download to finish.\n\nOnce the download is complete, this page will reload, and a status message indicating that the taxonomy is being loaded will appear. Please be patient!");
     window.location.replace("conf.py?download_ott_and_initiate_install=true");
 }
 
@@ -162,10 +171,12 @@ $(document).ready(function() {
         loadOTT(ottPath);
     }
     
+    $("#statusMessage").html("Attempting to check status of local OTT install...");
+    
     // activate load ott button
     $("#loadOTTButton").click(initiateDownload);
     
-    getGraphProperty("has_taxonomy", updateLoadOTTForm);
+    getGraphProperty("taxonomy_is_loading", updateLoadOTTForm);
     
     $("#radio").buttonset();
     getConf();

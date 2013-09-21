@@ -37,6 +37,8 @@ body {
 } #propertySelect {
     width: 15em;
     
+} .labelSpacer {
+    padding-left: 2em;
 }
         </style>
     </head>
@@ -65,7 +67,29 @@ body {
             </div>
 
             <h4 id="resultsHeader">Results</h4>
-
+                <div>
+                    <form class="inline-form" id="filterButtonsForm">
+                        <strong>Filter:</strong>
+                        <span class="labelSpacer">Ingroup:</span>
+                        <div class="btn-group" data-toggle="buttons-radio" id="ingroupButtons">
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="ingroupSetBtn">Set</button>
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="ingroupNotSetBtn">NOT set</button>
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="ingroupAllBtn">Both</button>
+                        </div>
+                        <span class="labelSpacer">Rooting:</span>
+                        <div class="btn-group" data-toggle="buttons-radio" id="rootingButtons">
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="rootingSetBtn">Set</button>
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="rootingNotSetBtn">NOT set</button>
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="rootingAllBtn">Both</button>
+                        </div>
+                        <span class="labelSpacer">Names:</span>
+                        <div class="btn-group" data-toggle="buttons-radio" id="namesMappedButtons">
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="namesMappedBtn">All mapped</button>
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="namesNotMappedBtn">Some NOT mapped</button>
+                            <button type="button" class="btn btn-small" name="ingroupSet" id="namedMappedAllBtn">Both</button>
+                        </div>
+                    </form>
+                </div>
                 <!--div id="results">
                     <table id="resultsTable"></table>
                 </div-->

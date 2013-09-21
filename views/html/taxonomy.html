@@ -27,16 +27,26 @@ body {
         </div>
     
         <script>
-            
+        
 function updateView(response) {
-    if (response.has_taxonomy) {
+
+    if (response["taxonomy_is_loading"] == true) {
+        $("#statusMessage").html("The OTT taxonomy is currently being loaded. You may refresh this page to check this status again.");
+        return;
+
+    } else {
+        getGraphProperty("has_taxonomy", updateView);
+
+    }
+
+    if (response["has_taxonomy"] == true) {
         $("#statusMessage").html("The OTT taxonomy has been loaded.");
     }
 }
 
 $(document).ready(function() {
    
-    getGraphProperty("has_taxonomy", updateView);
+    getGraphProperty("taxonomy_is_loading", updateView);
     
 });
 
