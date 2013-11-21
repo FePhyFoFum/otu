@@ -23,13 +23,13 @@ import org.neo4j.kernel.Traversal;
 import org.neo4j.server.plugins.*;
 import org.neo4j.server.rest.repr.OTRepresentationConverter;
 import org.neo4j.server.rest.repr.Representation;
+import org.opentree.exceptions.TreeNotFoundException;
 import org.opentree.graphdb.GraphDatabaseAgent;
 import org.opentree.otu.DatabaseBrowser;
 import org.opentree.otu.DatabaseManager;
 import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
-import org.opentree.otu.exceptions.NoSuchTreeException;
 import org.opentree.properties.OTVocabularyPredicate;
 
 import com.sun.jersey.api.client.Client;
@@ -42,13 +42,13 @@ public class treeJsons extends ServerPlugin{
 	/**
 	 * @param nodeId
 	 * @return
-	 * @throws NoSuchTreeException 
+	 * @throws TreeNotFoundException 
 	 */
 	@Description( "Get the neo4j root node for a given tree id" )
 	@PluginTarget( GraphDatabaseService.class )
 	public Long getRootNodeIdForTreeId(@Source GraphDatabaseService graphDb,
 			@Description( "The id of the tree to be found.")
-			@Parameter(name = "treeId", optional = false) String treeId) throws NoSuchTreeException {
+			@Parameter(name = "treeId", optional = false) String treeId) throws TreeNotFoundException {
 
 		DatabaseBrowser browser = new DatabaseBrowser(graphDb);
 
@@ -61,14 +61,14 @@ public class treeJsons extends ServerPlugin{
 	/**
 	 * @param nodeId
 	 * @return
-	 * @throws NoSuchTreeException 
+	 * @throws TreeNotFoundException 
 	 */
 	@Description( "Make a working copy of the tree below the designated root node" )
 	@PluginTarget( Node.class )
 	public Representation makeWorkingCopy(@Source Node root,
 			@Description("The id of any node in the original tree, whose counterpart in the copied tree will be identified in the response. "
 					+ "If no node with this id is found in the original tree, then null will be returned for the corresponding node id.")
-				@Parameter(name="nodeIdOfInterest", optional=true) Long nodeIdOfInterest) throws NoSuchTreeException {
+				@Parameter(name="nodeIdOfInterest", optional=true) Long nodeIdOfInterest) throws TreeNotFoundException {
 
 		DatabaseManager manager = new DatabaseManager(root.getGraphDatabase());
 
@@ -97,11 +97,11 @@ public class treeJsons extends ServerPlugin{
 	/**
 	 * @param nodeId
 	 * @return
-	 * @throws NoSuchTreeException 
+	 * @throws TreeNotFoundException 
 	 */
 	@Description( "Save the working copy that this node is the root of" )
 	@PluginTarget( Node.class )
-	public Representation saveWorkingCopy(@Source Node root) throws NoSuchTreeException {
+	public Representation saveWorkingCopy(@Source Node root) throws TreeNotFoundException {
 
 		DatabaseManager manager = new DatabaseManager(root.getGraphDatabase());
 
@@ -131,11 +131,11 @@ public class treeJsons extends ServerPlugin{
 	/**
 	 * @param nodeId
 	 * @return
-	 * @throws NoSuchTreeException 
+	 * @throws TreeNotFoundException 
 	 */
 	@Description( "Discard the working copy that this node is the root of" )
 	@PluginTarget( Node.class )
-	public Representation discardWorkingCopy(@Source Node root) throws NoSuchTreeException {
+	public Representation discardWorkingCopy(@Source Node root) throws TreeNotFoundException {
 
 		DatabaseManager manager = new DatabaseManager(root.getGraphDatabase());
 

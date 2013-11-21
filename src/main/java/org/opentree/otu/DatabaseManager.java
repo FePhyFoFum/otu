@@ -15,6 +15,7 @@ import jade.tree.JadeTree;
 import opentree.taxonomy.contexts.TaxonomyNodeIndex;
 
 import org.opentree.GeneralUtils;
+import org.opentree.exceptions.TreeNotFoundException;
 import org.opentree.graphdb.DatabaseUtils;
 import org.opentree.graphdb.GraphDatabaseAgent;
 import org.opentree.nexson.io.NexsonSource;
@@ -23,7 +24,6 @@ import org.opentree.otu.constants.OTUGraphProperty;
 import org.opentree.otu.constants.OTUNodeProperty;
 import org.opentree.otu.constants.OTURelType;
 import org.opentree.otu.exceptions.DuplicateSourceException;
-import org.opentree.otu.exceptions.NoSuchTreeException;
 import org.opentree.properties.BasicType;
 import org.opentree.properties.OTVocabularyPredicate;
 import org.neo4j.graphdb.Direction;
@@ -439,7 +439,7 @@ public class DatabaseManager extends OTUDatabase {
 	/**
 	 * Remove a local source and all its trees.
 	 * @param sourceId
-	 * @throws NoSuchTreeException 
+	 * @throws TreeNotFoundException 
 	 */
 	public void deleteSource(Node sourceMeta) {
 		
