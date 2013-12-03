@@ -193,7 +193,8 @@ public class DatabaseManager extends OTUDatabase {
 				}
 
 				// get the tree id from the nexson if there is one or create an arbitrary one if not
-				String treeIdSuffix = (String) tree.getObject(OTUNodeProperty.PHYLOGRAFTER_ID.propertyName());
+//				String treeIdSuffix = (String) tree.getObject(OTUNodeProperty.PHYLOGRAFTER_ID.propertyName());
+				String treeIdSuffix = (String) tree.getObject(OTUNodeProperty.NEXSON_ID.propertyName());
 				if (treeIdSuffix ==  null) {
 					treeIdSuffix = OTUConstants.LOCAL_TREEID_PREFIX + /* .value + */ String.valueOf(i);
 				}
@@ -824,7 +825,7 @@ public class DatabaseManager extends OTUDatabase {
 		
 		// mark the tips as OTU nodes
 		if (curJadeNode.getChildCount() < 1) {
-			curGraphNode.setProperty(OTVocabularyPredicate.OT_IS_OTU.propertyName(), true);
+			curGraphNode.setProperty(OTVocabularyPredicate.OT_IS_LEAF.propertyName(), true);
 			
 			// for otu nodes, connect them to the taxonomy if it exists
 			if (config.hasTaxonomy()) {

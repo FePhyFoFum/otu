@@ -133,12 +133,14 @@ public enum OTUNodeProperty implements OTPropertyPredicate {
 	/**
 	 * An id property used within nexson files. Relevance to OTU is unclear.
 	 */
-	NEXSON_ID ("nexsonid", String.class),
+	NEXSON_ID ("nexson_id", String.class),
 
-	/**
+	/*
 	 * An id property used by phylografter. We assign these values to incoming trees, and also hide these properties when returning metadata.
-	 */
+	 *
 	PHYLOGRAFTER_ID ("phylografter_id", long.class),
+	
+	*/
 	
 	/**
 	 * A flag specifying that the clade represented by the node is the ingroup for the tree. Is only set on the root node

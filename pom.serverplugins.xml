@@ -3,7 +3,7 @@
   <groupId>opentree</groupId>
   <artifactId>otu</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>otu</name>
+  <name>otu-neo4j-plugins</name>
   <description>Server-side restful plugins for the opentree project.</description>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
